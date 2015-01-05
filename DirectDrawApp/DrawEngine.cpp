@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include <math.h>
 
-extern volatile unsigned int RenderCores;
+volatile unsigned int RenderCores;
 Color RandomMadness(const int x, const int y);
 /*
 Рендер поток in nutshell

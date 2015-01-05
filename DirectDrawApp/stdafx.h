@@ -20,6 +20,7 @@
 #include <tchar.h>
 #include <strsafe.h>
 #include "DrawEngine.h"
+#include "CWindow.hpp"
 
 
 // TODO: reference additional headers your program requires here

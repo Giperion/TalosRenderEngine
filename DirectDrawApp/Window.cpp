@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#include "Window.h"
+#include "CWindow.hpp"
 
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
+// Default constructor
 Window::Window(WindowParam param, HINSTANCE instance, int nCmdShow)
 {
 	RunMutex = false;

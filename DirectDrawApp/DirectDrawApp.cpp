@@ -1,56 +1,35 @@
-// DirectDrawApp.cpp : Defines the entry point for the application.
-//
-
 #include "stdafx.h"
-#include "DirectDrawApp.h"
-#include "DrawEngine.h"
-#include "PrivateMacro.h"
-#include "Window.h"
+#include "IWindow.hpp"
 
-extern volatile unsigned int RenderCores;
+IWindow *pWindow = nullptr;
 
-
-LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
-
-Window* window;
-DrawEngine* pDrawEngine;
-
-int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPTSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+	//
+	// Создаем окно
+	//
 
-#pragma region DetectProcessorCores
-#ifndef FIXEDCORE
-#ifndef _WIN64
-#error "Application used some functions, avaliable only in x64 mode. Please check code and correct function"
-#endif
+	if((pWindow = WindowCreate()) == nullptr) return 1;
 
-	//Автор в курсе про std::thread::hardware_concurency(). Автор просто недолюбливает std и если можно, то использует WinAPI
-	SYSTEM_INFO sysinfo;
-	ZeroMemory(&sysinfo, sizeof(sysinfo));
-	GetNativeSystemInfo(&sysinfo);
+	if(pWindow->Initialize() == false) return 1;
 
-	RenderCores = sysinfo.dwNumberOfProcessors;
-#endif
-#pragma endregion
+	//
+	// Основной цикл
+	//
 
-	WindowParam param;
-	param.width = ENGINEWIDTH;
-	param.height = ENGINEHEIGHT;
-	param.x = 100;
-	param.y = 100;
+	while(pWindow->Update())
+	{
+	}
 
-	window = new Window(param, hInstance, nCmdShow);
-	DWORD returnResult = window->Go(WndProc);
-	delete window;
-	return returnResult;
+	//
+	// Освобождение ресурсов
+	//
+
+	pWindow->Release();
+
+	//
+	// Возвращаем результат
+	//
+
+	return 0;
 }
-
-
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	return window->MessageHandler(hWnd, message, wParam, lParam);
-}
-

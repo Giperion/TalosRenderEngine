@@ -20,6 +20,7 @@ struct Color
 	byte G;
 	byte B;
 };
+
 class DrawEngine
 {
 public:
