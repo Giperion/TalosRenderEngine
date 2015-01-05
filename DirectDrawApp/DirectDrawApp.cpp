@@ -20,6 +20,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_ LPTSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
+	MessageBox(NULL, L"Bla bla bla", L"Bla bla bla", MB_OK);
 
 #pragma region DetectProcessorCores
 #ifndef FIXEDCORE
