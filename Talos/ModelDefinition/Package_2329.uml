@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/Kernel" xmlns:dm2="http://schemas.microsoft.com/dsltools/Component" xmlns:dm3="http://schemas.microsoft.com/dsltools/UseCase" xmlns:dm4="http://schemas.microsoft.com/dsltools/Activity" xmlns:dm5="http://schemas.microsoft.com/dsltools/Interaction" xmlns:dm6="http://schemas.microsoft.com/dsltools/UmlModelLibrary" xmlns:dm7="http://schemas.microsoft.com/dsltools/UmlDiagrams" xmlns:dm8="http://schemas.microsoft.com/dsltools/LogicalClassDesigner"
+  dslVersion="1.0.0.0"
+  Id="e6801dc4-b055-4c9c-bad7-7985623e6412"
+  name="Движок: Менеджер" xmlns="http://schemas.microsoft.com/dsltools/ModelStore">
+  <packagedElements>
+    <packageHasNamedElement>
+      <enumeration
+        Id="cb87ee3f-4d1b-4382-8bfa-926820be0330"
+        name="PresentMethod"
+        isAbstract="false"
+        isLeaf="false">
+        <ownedLiterals>
+          <enumerationLiteral
+            Id="a6e3dc9b-af29-4193-93de-00f9bcf271ca"
+            name="DirectDraw" />
+          <enumerationLiteral
+            Id="c8dd67d0-a684-4880-83cd-343918d30060"
+            name="DirectX" />
+          <enumerationLiteral
+            Id="80f0dbd3-641f-4231-a054-e5b2e936b619"
+            name="GDI" />
+        </ownedLiterals>
+      </enumeration>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <enumeration
+        Id="594f19a5-91f2-40aa-a0a5-631e6f3e3ae7"
+        name="RenderMethod"
+        isAbstract="false"
+        isLeaf="false">
+        <ownedLiterals>
+          <enumerationLiteral
+            Id="1ccc01ad-73e5-4f23-a4b7-e07180809d14"
+            name="OpenCL" />
+          <enumerationLiteral
+            Id="d9040da1-8e0f-447c-8bbd-c6388be48ed7"
+            name="CPU" />
+          <enumerationLiteral
+            Id="04b81c84-1590-4605-80c4-6d0a160f4215"
+            name="Shader" />
+        </ownedLiterals>
+      </enumeration>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="aa9e403b-cf99-44e4-b7ef-eff65aea2529"
+        name="DrawEngine"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false" />
+    </packageHasNamedElement>
+  </packagedElements>
+</package>

@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/Kernel" xmlns:dm2="http://schemas.microsoft.com/dsltools/Component" xmlns:dm3="http://schemas.microsoft.com/dsltools/UseCase" xmlns:dm4="http://schemas.microsoft.com/dsltools/Activity" xmlns:dm5="http://schemas.microsoft.com/dsltools/Interaction" xmlns:dm6="http://schemas.microsoft.com/dsltools/UmlModelLibrary" xmlns:dm7="http://schemas.microsoft.com/dsltools/UmlDiagrams" xmlns:dm8="http://schemas.microsoft.com/dsltools/LogicalClassDesigner"
+  dslVersion="1.0.0.0"
+  Id="98d211bb-c4de-4a62-be71-b15fd198e1bb"
+  name="Движок: Рендеры" xmlns="http://schemas.microsoft.com/dsltools/ModelStore">
+  <packagedElements>
+    <packageHasNamedElement>
+      <class
+        Id="61c2ab8e-183f-4155-a780-6c0f67487ca3"
+        name="CPURenderer"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <suppliersInternal>
+          <interfaceRealization
+            Id="3fb99e32-a2f9-4624-a437-a52d4556d262">
+            <interfaceMoniker
+              Id="1b9c1a18-879e-4a69-b2a1-1088aacd7ca8"
+              LastKnownName="IEngineRenderer"
+              LastKnownLocation="Package_2332.uml" />
+          </interfaceRealization>
+        </suppliersInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <Interface
+        Id="1b9c1a18-879e-4a69-b2a1-1088aacd7ca8"
+        name="IEngineRenderer"
+        isAbstract="false"
+        isLeaf="false" />
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="ce12c9c0-6d11-4b53-8c41-06d0e4ef0210"
+        name="CLRenderer"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <suppliersInternal>
+          <interfaceRealization
+            Id="e18fee68-1ab7-49b7-84cb-9dd969c1cf52">
+            <interfaceMoniker
+              Id="1b9c1a18-879e-4a69-b2a1-1088aacd7ca8"
+              LastKnownName="IEngineRenderer"
+              LastKnownLocation="Package_2332.uml" />
+          </interfaceRealization>
+        </suppliersInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="e22cfe6f-610d-4d0d-b244-6ccedbca459b"
+        name="GDIRenderer"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <suppliersInternal>
+          <interfaceRealization
+            Id="9612d49d-cec2-46e2-b6e9-5e34dade4745">
+            <interfaceMoniker
+              Id="1b9c1a18-879e-4a69-b2a1-1088aacd7ca8"
+              LastKnownName="IEngineRenderer"
+              LastKnownLocation="Package_2332.uml" />
+          </interfaceRealization>
+        </suppliersInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="092f0caa-4f2d-46d6-b4ca-92cb8d9a25aa"
+        name="GLRenderer"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <suppliersInternal>
+          <interfaceRealization
+            Id="c70e2aec-0fb5-4504-8207-a13aeccd7dfc">
+            <interfaceMoniker
+              Id="1b9c1a18-879e-4a69-b2a1-1088aacd7ca8"
+              LastKnownName="IEngineRenderer"
+              LastKnownLocation="Package_2332.uml" />
+          </interfaceRealization>
+        </suppliersInternal>
+      </class>
+    </packageHasNamedElement>
+  </packagedElements>
+</package>

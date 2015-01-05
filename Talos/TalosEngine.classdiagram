@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<logicalClassDesignerModel xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/Kernel" xmlns:dm2="http://schemas.microsoft.com/dsltools/Component" xmlns:dm3="http://schemas.microsoft.com/dsltools/UseCase" xmlns:dm4="http://schemas.microsoft.com/dsltools/Activity" xmlns:dm5="http://schemas.microsoft.com/dsltools/Interaction" xmlns:dm6="http://schemas.microsoft.com/dsltools/UmlModelLibrary" xmlns:dm7="http://schemas.microsoft.com/dsltools/UmlDiagrams" xmlns:dm8="http://schemas.microsoft.com/dsltools/ModelStore" dslVersion="1.0.0.0" Id="9d962116-2b36-4b94-b87a-a8827c313b1d" name="TalosEngine" linkedPackageId="6fb9db9d-2d43-4887-8659-eb125085c8aa" xmlns="http://schemas.microsoft.com/dsltools/LogicalClassDesigner">
+  <packagedElements>
+    <logicalClassDesignerModelHasPackages>
+      <package Id="d4106dbe-888b-48e5-8fb8-e7d67b0f4149" name="Движок: Менеджер">
+        <elementDefinition Id="e6801dc4-b055-4c9c-bad7-7985623e6412" />
+        <packagedElements>
+          <packageHasNamedElement>
+            <enumeration Id="221d74e6-a468-4160-9edd-505678455db7" name="PresentMethod" isAbstract="false" isLeaf="false">
+              <elementDefinition Id="cb87ee3f-4d1b-4382-8bfa-926820be0330" />
+              <ownedLiterals>
+                <enumerationLiteral Id="5cbf9733-be9d-4b81-9c55-af2e77a4c881" name="DirectDraw">
+                  <elementDefinition Id="a6e3dc9b-af29-4193-93de-00f9bcf271ca" />
+                </enumerationLiteral>
+                <enumerationLiteral Id="a487061f-1bd2-4619-8068-3cc945fb257a" name="DirectX">
+                  <elementDefinition Id="c8dd67d0-a684-4880-83cd-343918d30060" />
+                </enumerationLiteral>
+                <enumerationLiteral Id="9b8e4339-cc63-48fc-a369-b13e85d7a673" name="GDI">
+                  <elementDefinition Id="80f0dbd3-641f-4231-a054-e5b2e936b619" />
+                </enumerationLiteral>
+              </ownedLiterals>
+            </enumeration>
+          </packageHasNamedElement>
+          <packageHasNamedElement>
+            <enumeration Id="830c78dd-e99f-4f09-bce7-1b4d6435c57c" name="RenderMethod" isAbstract="false" isLeaf="false">
+              <elementDefinition Id="594f19a5-91f2-40aa-a0a5-631e6f3e3ae7" />
+              <ownedLiterals>
+                <enumerationLiteral Id="b7f00974-9a80-4975-a8a4-69a063c4c31d" name="OpenCL">
+                  <elementDefinition Id="1ccc01ad-73e5-4f23-a4b7-e07180809d14" />
+                </enumerationLiteral>
+                <enumerationLiteral Id="edb1eb3d-da34-4b6e-9d42-feae947c4846" name="CPU">
+                  <elementDefinition Id="d9040da1-8e0f-447c-8bbd-c6388be48ed7" />
+                </enumerationLiteral>
+                <enumerationLiteral Id="5d654c60-894a-42ec-babf-60523bbc0906" name="Shader">
+                  <elementDefinition Id="04b81c84-1590-4605-80c4-6d0a160f4215" />
+                </enumerationLiteral>
+              </ownedLiterals>
+            </enumeration>
+          </packageHasNamedElement>
+          <packageHasNamedElement>
+            <class Id="c77ae884-f68c-4549-ad67-3dec78554b63" name="DrawEngine" isAbstract="false" isLeaf="false" isActiveClass="false">
+              <elementDefinition Id="aa9e403b-cf99-44e4-b7ef-eff65aea2529" />
+            </class>
+          </packageHasNamedElement>
+        </packagedElements>
+      </package>
+    </logicalClassDesignerModelHasPackages>
+    <logicalClassDesignerModelHasPackages>
+      <package Id="b47eeca7-e926-48d3-abce-fd1b40e4e9eb" name="Оконный интерфейс">
+        <elementDefinition Id="5b490462-7826-494e-9a5f-eed766fc5d40" />
+        <packagedElements>
+          <packageHasNamedElement>
+            <class Id="28af7d7e-01de-4aa9-879f-857a6b358091" name="Window" isAbstract="false" isLeaf="false" isActiveClass="false">
+              <elementDefinition Id="3008d5de-5386-47ec-bdfe-c8a30e8dcdc8" />
+            </class>
+          </packageHasNamedElement>
+          <packageHasNamedElement>
+            <enumeration Id="f05a895c-9b73-4ee1-bb4e-3ba1540ae5e3" name="WindowType" isAbstract="false" isLeaf="false">
+              <elementDefinition Id="f5abd38f-f367-45fb-b7b1-ef6e5ef6d636" />
+              <ownedLiterals>
+                <enumerationLiteral Id="7f98e011-a1c9-4327-890b-9d3fbd5145d2" name="GUI">
+                  <elementDefinition Id="4cc1c633-f712-4e3d-b3b8-0ef1a91d6992" />
+                </enumerationLiteral>
+                <enumerationLiteral Id="7f5a861d-a8bb-49bc-838b-6d7886d1578e" name="Console">
+                  <elementDefinition Id="ba0b6e37-dec2-4134-b91f-bd3a68e5d5a9" />
+                </enumerationLiteral>
+              </ownedLiterals>
+            </enumeration>
+          </packageHasNamedElement>
+        </packagedElements>
+      </package>
+    </logicalClassDesignerModelHasPackages>
+    <logicalClassDesignerModelHasPackages>
+      <package Id="2e0b0690-fb75-41ea-89a0-21ed3580ee4f" name="Движок: Рендеры">
+        <elementDefinition Id="98d211bb-c4de-4a62-be71-b15fd198e1bb" />
+        <packagedElements>
+          <packageHasNamedElement>
+            <class Id="6dc25d05-0eca-4c7b-a056-da8a419627e5" name="CPURenderer" isAbstract="false" isLeaf="false" isActiveClass="false">
+              <elementDefinition Id="61c2ab8e-183f-4155-a780-6c0f67487ca3" />
+              <suppliersInternal>
+                <interfaceRealization Id="cdae994c-91be-4499-ac3c-1c837da2b0fc">
+                  <interfaceMoniker Id="8025c9e5-1766-4a7b-a437-595744dc82cf" LastKnownName="IEngineRenderer" />
+                  <elementDefinition Id="3fb99e32-a2f9-4624-a437-a52d4556d262" />
+                </interfaceRealization>
+              </suppliersInternal>
+            </class>
+          </packageHasNamedElement>
+          <packageHasNamedElement>
+            <Interface Id="8025c9e5-1766-4a7b-a437-595744dc82cf" name="IEngineRenderer" isAbstract="false" isLeaf="false">
+              <elementDefinition Id="1b9c1a18-879e-4a69-b2a1-1088aacd7ca8" />
+            </Interface>
+          </packageHasNamedElement>
+          <packageHasNamedElement>
+            <class Id="6089ea1a-ddd3-4ee0-9ddb-d7745eb9ae23" name="CLRenderer" isAbstract="false" isLeaf="false" isActiveClass="false">
+              <elementDefinition Id="ce12c9c0-6d11-4b53-8c41-06d0e4ef0210" />
+              <suppliersInternal>
+                <interfaceRealization Id="385d9f2e-7c92-4a68-9c34-744821def1e9">
+                  <interfaceMoniker Id="8025c9e5-1766-4a7b-a437-595744dc82cf" LastKnownName="IEngineRenderer" />
+                  <elementDefinition Id="e18fee68-1ab7-49b7-84cb-9dd969c1cf52" />
+                </interfaceRealization>
+              </suppliersInternal>
+            </class>
+          </packageHasNamedElement>
+          <packageHasNamedElement>
+            <class Id="45ea0757-fcee-49d9-8be5-5ae6c49eab5b" name="GDIRenderer" isAbstract="false" isLeaf="false" isActiveClass="false">
+              <elementDefinition Id="e22cfe6f-610d-4d0d-b244-6ccedbca459b" />
+              <suppliersInternal>
+                <interfaceRealization Id="bbe53031-e1e1-43e0-996a-7c064f4a0c42">
+                  <interfaceMoniker Id="8025c9e5-1766-4a7b-a437-595744dc82cf" LastKnownName="IEngineRenderer" />
+                  <elementDefinition Id="9612d49d-cec2-46e2-b6e9-5e34dade4745" />
+                </interfaceRealization>
+              </suppliersInternal>
+            </class>
+          </packageHasNamedElement>
+          <packageHasNamedElement>
+            <class Id="56d1a5fe-2057-4aeb-a6c0-8669ca05fbef" name="GLRenderer" isAbstract="false" isLeaf="false" isActiveClass="false">
+              <elementDefinition Id="092f0caa-4f2d-46d6-b4ca-92cb8d9a25aa" />
+              <suppliersInternal>
+                <interfaceRealization Id="78e074ca-ffce-45e6-bafe-512501050ab5">
+                  <interfaceMoniker Id="8025c9e5-1766-4a7b-a437-595744dc82cf" LastKnownName="IEngineRenderer" />
+                  <elementDefinition Id="c70e2aec-0fb5-4504-8207-a13aeccd7dfc" />
+                </interfaceRealization>
+              </suppliersInternal>
+            </class>
+          </packageHasNamedElement>
+        </packagedElements>
+      </package>
+    </logicalClassDesignerModelHasPackages>
+    <logicalClassDesignerModelHasPackages>
+      <package Id="73c0c8c0-5f72-4147-8f24-96c15f0a6521" name="Движок: Методы">
+        <elementDefinition Id="fc836232-c1fa-4e44-a0ec-100344f0b3f2" />
+      </package>
+    </logicalClassDesignerModelHasPackages>
+  </packagedElements>
+  <package Id="6fb9db9d-2d43-4887-8659-eb125085c8aa" name="Talos">
+    <elementDefinition Id="61306bc7-2f4d-4f43-9bca-d644173cb649" />
+    <profileInstances>
+      <packageHasProfileInstances Id="a84f4809-fc9a-41f6-a422-6f6e404a8f18">
+        <profileInstance Id="9c133aa0-5d9a-427e-8d8b-3d1590c4e425" name="StandardProfileL2">
+          <elementDefinition Id="e34d544e-0fea-4ed6-ac5e-1b74119ac791" />
+        </profileInstance>
+        <elementDefinition Id="0caec977-1f8c-4ba3-a7db-8cc9ad9cc73b" />
+      </packageHasProfileInstances>
+      <packageHasProfileInstances Id="14c0bec5-9b6b-4f8a-bab4-7e7207affd6e">
+        <profileInstance Id="c9d35ccb-bc1c-4bfa-98b9-644d989fe840" name="StandardProfileL3">
+          <elementDefinition Id="532ea607-fb19-44b8-8502-3351b05452be" />
+        </profileInstance>
+        <elementDefinition Id="29349502-908c-4fda-9054-c48619c59ed0" />
+      </packageHasProfileInstances>
+    </profileInstances>
+  </package>
+</logicalClassDesignerModel>
