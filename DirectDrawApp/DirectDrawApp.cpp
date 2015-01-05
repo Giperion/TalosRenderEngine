@@ -20,7 +20,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_ LPTSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
-	MessageBox(NULL, L"Bla bla bla", L"Bla bla bla", MB_OK);
 
 #pragma region DetectProcessorCores
 #ifndef FIXEDCORE
@@ -44,8 +43,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	param.y = 100;
 
 	window = new Window(param, hInstance, nCmdShow);
-	return window->Go(WndProc);
-
+	DWORD returnResult = window->Go(WndProc);
+	delete window;
+	return returnResult;
 }
 
 
