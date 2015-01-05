@@ -109,7 +109,6 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 			delete pDrawEngine;
 			pDrawEngine = nullptr;
 		}
-		pDrawEngine->MaxIteration = 20;
 		CreateThread(NULL, NULL, RenderThread, pDrawEngine, NULL, NULL);
 		Sleep(1000);
 		break;

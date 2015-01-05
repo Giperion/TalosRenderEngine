@@ -14,6 +14,13 @@ enum RenderMethod : byte
 	Custom
 };
 
+enum PresentMethod : byte
+{
+	DirectDraw,
+	GDI,
+	DirectX
+};
+
 struct Color
 {
 	byte R;
@@ -24,34 +31,37 @@ class DrawEngine
 {
 public:
 	char CurrentState;
-	DrawEngine(HWND hWnd);
+	DrawEngine(HWND hWnd, PresentMethod PMethod = DirectDraw);
+
 	EXPERIMENTAL void DrawTest();
-	EXPERIMENTAL void SetFractalOffset(const l_long offsetX, const l_long offsetY);
-	EXPERIMENTAL void SetFractalScale(const l_long newScale);
 	EXPERIMENTAL DWORD WINAPI ThreadEntryPoint(DWORD param);
 	
+	//RenderEngine command
 	bool Render();
 	void PostRender(double RenderTime);
 	double GetLastRenderTime();
 
+	bool NYI SetScreenBufferSize(int width, int height);
+
 	//GetSetMethods
-	RenderMethod GetCurrentMethod();
+	RenderMethod GetCurrentRenderMethod();
+	void NYI SetRenderMethod(RenderMethod newMethod);
+	PresentMethod GetCurrentPresentMethod();
+	void NYI SetPresentMethod(PresentMethod newPresentMethod);
 	void SetCurrentMethod(RenderMethod method);
 
 	void SetCustomRenderMethod(void* _fastcall renderMethod);
 
-	//Color methods
+	//Color methods, must be moved
 	Color MandelbrotSet(const int x, const int y);
-	int MaxIteration;
-
-
 	~DrawEngine();
 
-
+	//Windows and screen buffer
+	HWND AttachedHWND;
 	byte** m_FrameChunks;
 	
 
-	HWND AttachedHWND;
+	//DirectDraw
 	LPDIRECTDRAW pDirectDraw;
 
 	LPDIRECTDRAWSURFACE pPrimarySurface;
@@ -61,17 +71,23 @@ public:
 
 	DDSURFACEDESC DirectSurfaceDesc;
 
-
+	//Sync
 	DWORD RenderStatus;
 	HANDLE Event_Rendering;
 	HANDLE Event_RenderFinished;
 private:
 	double LastRenderTime;
-	RenderMethod currentMethod;
+	RenderMethod renderMethod;
+	PresentMethod presentMethod;
 
-	l_long offsetX;
-	l_long offsetY;
-	l_long FractalScale;
+
+
+	//InitPresenters
+	bool InitDirectDraw();
+
+	//DeInitPresenters
+
+	void ShutDownDirectDraw();
 };
 
 struct WindowParam

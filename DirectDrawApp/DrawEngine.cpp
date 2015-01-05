@@ -14,7 +14,11 @@ DWORD WINAPI EngineSatellite(LPVOID param)
 	RenderSatelliteInfo* p_blockinfo = reinterpret_cast <RenderSatelliteInfo*> (param);
 	RenderSatelliteInfo blockInfo = *p_blockinfo;
 
-	srand(GetTickCount());
+	if (p_blockinfo == nullptr)
+	{
+		MessageBox(NULL, L"Attempt to initialize satellite with null param", L"Critical Error", MB_OK | MB_ICONERROR);
+	}
+
 	byte* m_FrameChunk = new byte[(blockInfo.width * blockInfo.height) * 4];
 	blockInfo.ourEngine->m_FrameChunks[blockInfo.ID] = m_FrameChunk;
 
@@ -191,32 +195,66 @@ endloop:
 }
 
 
-DrawEngine::DrawEngine(HWND hWnd)
+DrawEngine::DrawEngine(HWND hWnd, PresentMethod PMethod)
 {
 	AttachedHWND = hWnd;
 
 	CurrentState = 0;
 	RenderStatus = 0;
 
-	FractalScale = 1.0;
+	switch (presentMethod)
+	{
+	case DirectDraw:
+		if (!InitDirectDraw())
+		{
+			MessageBox(AttachedHWND, L"DirectDraw init error!", L"Critical error", MB_OK | MB_ICONERROR);
+		}
+		break;
+	case GDI:
+		MessageBox(AttachedHWND, L"GDI present method not implemented!", L"Error", MB_OK | MB_ICONERROR);
+		CurrentState = 1;
+		break;
+	case DirectX:
+		MessageBox(AttachedHWND, L"DirectX present method not implemented!", L"Error", MB_OK | MB_ICONERROR);
+		CurrentState = 1;
+		break;
+	default:
+		MessageBox(AttachedHWND, L"Undefined present method is choosen!", L"Critical Error", MB_OK | MB_ICONERROR);
+		CurrentState = 1;
+		break;
+	}
 
+
+	//Init render events 
+	Event_Rendering = CreateEvent(NULL, TRUE, FALSE, L"Giperion_DrawEngine_Render");
+	Event_RenderFinished = CreateEvent(NULL, TRUE, FALSE, L"Giperion_DrawEngine_RenderFinished");
+#ifdef FIXEDCORE
+	m_FrameChunks = new byte* [FIXEDCORE];
+	RenderCores = RENDERCORES;
+#else
+	m_FrameChunks = new byte* [RenderCores];
+#endif
+}
+
+bool DrawEngine::InitDirectDraw()
+{
 	HRESULT FuncResult;
 
 	FuncResult = DirectDrawCreate(NULL, &pDirectDraw, NULL);
 	if (FuncResult != DD_OK)
 	{
 		CurrentState = 1;
-		return;
+		return false;
 	}
-	FuncResult = pDirectDraw->SetCooperativeLevel(hWnd, DDSCL_NORMAL);
+	FuncResult = pDirectDraw->SetCooperativeLevel(AttachedHWND, DDSCL_NORMAL);
 	if (FuncResult != DD_OK)
 	{
 		CurrentState = 2;
 		pDirectDraw->Release();
-		return;
+		return false;
 	}
 
-	memset(&DirectSurfaceDesc, 0, sizeof (DDSURFACEDESC));
+	memset(&DirectSurfaceDesc, 0, sizeof(DDSURFACEDESC));
 	DirectSurfaceDesc.dwSize = sizeof(DDSURFACEDESC);
 	DirectSurfaceDesc.dwFlags = DDSD_CAPS;
 	DirectSurfaceDesc.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
@@ -226,7 +264,7 @@ DrawEngine::DrawEngine(HWND hWnd)
 	{
 		pDirectDraw->Release();
 		CurrentState = 3;
-		return;
+		return false;
 	}
 
 	FuncResult = pDirectDraw->CreateClipper(NULL, &pPrimaryClipper, NULL);
@@ -235,19 +273,19 @@ DrawEngine::DrawEngine(HWND hWnd)
 		pPrimarySurface->Release();
 		pDirectDraw->Release();
 		CurrentState = 4;
-		return;
+		return false;
 	}
 
-	FuncResult = pPrimaryClipper->SetHWnd(NULL, hWnd);
+	FuncResult = pPrimaryClipper->SetHWnd(NULL, AttachedHWND);
 	if (FuncResult != DD_OK)
 	{
 		pPrimaryClipper->Release();
 		pPrimarySurface->Release();
 		pDirectDraw->Release();
 		CurrentState = 5;
-		return;
+		return false;
 	}
-	
+
 	FuncResult = pPrimarySurface->SetClipper(pPrimaryClipper);
 	if (FuncResult != DD_OK)
 	{
@@ -255,10 +293,10 @@ DrawEngine::DrawEngine(HWND hWnd)
 		pPrimarySurface->Release();
 		pDirectDraw->Release();
 		CurrentState = 6;
-		return;
+		return false;
 	}
 
-	memset(&DirectSurfaceDesc, 0, sizeof (DDSURFACEDESC));
+	memset(&DirectSurfaceDesc, 0, sizeof(DDSURFACEDESC));
 	DirectSurfaceDesc.dwSize = sizeof(DDSURFACEDESC);
 	DirectSurfaceDesc.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT;
 	DirectSurfaceDesc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
@@ -272,18 +310,9 @@ DrawEngine::DrawEngine(HWND hWnd)
 		pPrimarySurface->Release();
 		pDirectDraw->Release();
 		CurrentState = 7;
-		return;
+		return false;
 	}
-	//lol, we made it
-	//Init render events 
-	Event_Rendering = CreateEvent(NULL, TRUE, FALSE, L"Giperion_DrawEngine_Render");
-	Event_RenderFinished = CreateEvent(NULL, TRUE, FALSE, L"Giperion_DrawEngine_RenderFinished");
-#ifdef FIXEDCORE
-	m_FrameChunks = new byte* [FIXEDCORE];
-	RenderCores = RENDERCORES;
-#else
-	m_FrameChunks = new byte* [RenderCores];
-#endif
+	return true;
 }
 
 DrawEngine::~DrawEngine()
@@ -306,13 +335,37 @@ DrawEngine::~DrawEngine()
 	//Мы выключаемся. Все все поняли?
 	Sleep(400);
 
+	switch (presentMethod)
+	{
+	case DirectDraw:
+		ShutDownDirectDraw();
+		break;
+	case GDI:
+		MessageBox(AttachedHWND, L"GDI present method can't be deinitialized!", L"Critical Error", MB_OK | MB_ICONERROR);
+		break;
+	case DirectX:
+		MessageBox(AttachedHWND, L"DirectX present method can't be deinitialized!", L"Critical Error", MB_OK | MB_ICONERROR);
+		break;
+	default:
+		MessageBox(AttachedHWND, L"Undefined deinit method called!", L"Critical Error", MB_OK | MB_ICONERROR);
+		break;
+	}
+
+	CloseHandle(Event_Rendering);
+	CloseHandle(Event_RenderFinished);
+}
+
+void DrawEngine::ShutDownDirectDraw()
+{
 	pPrimaryClipper->Release();
 	pBackSurface->Release();
 	pPrimarySurface->Release();
 	pDirectDraw->Release();
 
-	CloseHandle(Event_Rendering);
-	CloseHandle(Event_RenderFinished);
+	pPrimaryClipper = nullptr;
+	pBackSurface = nullptr;
+	pPrimarySurface = nullptr;
+	pDirectDraw = nullptr;
 }
 
 
@@ -333,22 +386,24 @@ DWORD WINAPI DrawEngine::ThreadEntryPoint(DWORD param)
 	return 3;
 }
 
-
-EXPERIMENTAL void DrawEngine::SetFractalOffset(const l_long offsetX, const l_long offsetY)
+RenderMethod DrawEngine::GetCurrentRenderMethod()
 {
-	this->offsetX = offsetX;
-	this->offsetY = offsetY;
+	return renderMethod;
 }
 
-
-EXPERIMENTAL void DrawEngine::SetFractalScale(const l_long newScale)
+void NYI DrawEngine::SetRenderMethod(RenderMethod newMethod)
 {
-	//Ну вот. Нас заставили изменить масштаб, когда еще проходит операция. Не поидет!
-	if (CurrentState != STATE_IDLE)
-	{
-		return;
-	}
-	FractalScale = newScale;
+	
+}
+
+PresentMethod DrawEngine::GetCurrentPresentMethod()
+{
+	return presentMethod;
+}
+
+void NYI DrawEngine::SetPresentMethod(PresentMethod newPresentMethod)
+{
+
 }
 
 bool DrawEngine::Render()
@@ -402,12 +457,12 @@ Color DrawEngine::MandelbrotSet(const int x, const int y)
 	const l_long EscapeRadius = 2.0L;
 	l_long EscapeRadius_x2 = EscapeRadius * EscapeRadius;
 
-	ResultX = (MinimumResultX + PixelWidth * x) * FractalScale + offsetX;
-	ResultY = (MinimumResultY + PixelHeight * y) * FractalScale + offsetY;
+	ResultX = (MinimumResultX + PixelWidth * x) * 1.0;
+	ResultY = (MinimumResultY + PixelHeight * y) * 1.0;
 
 	if (fabs(ResultY) < PixelHeight / 2) ResultY = 0.0;
 
-	for (; Iteration < MaxIteration && ((Zx_x2 + Zy_x2) < EscapeRadius_x2); Iteration++)
+	for (; Iteration < 20 && ((Zx_x2 + Zy_x2) < EscapeRadius_x2); Iteration++)
 	{
 		Zy = 2 * Zx * Zy + ResultY;
 		Zx = Zx_x2 - Zy_x2 + ResultX;
@@ -415,7 +470,7 @@ Color DrawEngine::MandelbrotSet(const int x, const int y)
 		Zy_x2 = Zy * Zy;
 	}
 
-	double Value = (1.0 / (double)MaxIteration) *  Iteration;
+	double Value = (1.0 / (double)20) *  Iteration;
 	//Раньше возвращали цвет по таблице, но увы, это не эффективный способ
 	//return ResoulveColor(Iteration);
 	int grayscaleComp = Lerp(0, 255, Value);
