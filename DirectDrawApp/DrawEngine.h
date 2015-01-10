@@ -3,15 +3,25 @@
 #include <Windows.h>
 #include <ddraw.h>
 #include "PrivateMacro.h"
-
-DWORD WINAPI RenderThread(LPVOID param);
-DWORD WINAPI EngineSatellite(LPVOID param);
+#include <deque>
+#include "IEngineRenderer.h"
 
 enum RenderMethod : byte
 {
 	MandelBrot,
 	SolidColor,
 	Custom
+};
+
+enum DrawEngineState : int
+{
+	DES_INIT,
+	DES_IDLE,
+	DES_PRESENTERFAILED,
+	DES_RENDER_IN_PROGRESS,
+	DES_RENDER_FINISHED,
+	DES_REQUEST_NEW_FRAME,
+	DES_SHUTINGDOWN
 };
 
 enum PresentMethod : byte
@@ -30,7 +40,7 @@ struct Color
 class DrawEngine
 {
 public:
-	char CurrentState;
+	volatile DrawEngineState CurrentState;
 	DrawEngine(HWND hWnd, PresentMethod PMethod = DirectDraw);
 
 	EXPERIMENTAL void DrawTest();
@@ -39,26 +49,31 @@ public:
 	//RenderEngine command
 	bool Render();
 	void PostRender(double RenderTime);
-	double GetLastRenderTime();
 
 	bool NYI SetScreenBufferSize(int width, int height);
 
 	//GetSetMethods
+	double GetLastRenderTime();
 	RenderMethod GetCurrentRenderMethod();
 	void NYI SetRenderMethod(RenderMethod newMethod);
 	PresentMethod GetCurrentPresentMethod();
 	void NYI SetPresentMethod(PresentMethod newPresentMethod);
 	void SetCurrentMethod(RenderMethod method);
 
+
+	void PushRenderer(IEngineRenderer* iRenderer);
+	void PopRenderer();
+
 	void SetCustomRenderMethod(void* _fastcall renderMethod);
 
 	//Color methods, must be moved
 	Color MandelbrotSet(const int x, const int y);
+
+
 	~DrawEngine();
 
 	//Windows and screen buffer
 	HWND AttachedHWND;
-	byte** m_FrameChunks;
 	
 
 	//DirectDraw
@@ -70,17 +85,12 @@ public:
 	LPDIRECTDRAWCLIPPER pPrimaryClipper;
 
 	DDSURFACEDESC DirectSurfaceDesc;
-
-	//Sync
-	DWORD RenderStatus;
-	HANDLE Event_Rendering;
-	HANDLE Event_RenderFinished;
 private:
 	double LastRenderTime;
 	RenderMethod renderMethod;
 	PresentMethod presentMethod;
 
-
+	std::deque <IEngineRenderer*> renderers;
 
 	//InitPresenters
 	bool InitDirectDraw();
@@ -88,6 +98,13 @@ private:
 	//DeInitPresenters
 
 	void ShutDownDirectDraw();
+
+	//Bliters
+	void BltMainBuffer();
+
+	pFrame Blt_DirectDraw();
+	pFrame Blt_GDI();
+	pFrame Blt_DirectX();
 };
 
 struct WindowParam
@@ -102,11 +119,10 @@ struct RenderSatelliteInfo
 {
 	int width;
 	int height;
-	int StartX;
 	int StartY;
 
 	int ID;
-	DrawEngine* ourEngine;
+	LPVOID unused;
 
 	//UNREFERENCE, for future
 	RenderMethod Method;

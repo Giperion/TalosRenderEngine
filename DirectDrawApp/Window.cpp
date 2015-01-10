@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Window.h"
+#include "PCEngineRenderer.h"
 
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -76,6 +77,7 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 	HDC hdc;
 
 	RECT TextCoord;
+	PCEngineRenderer* pEngine;
 
 
 	switch (message)
@@ -101,7 +103,7 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 		StatusText = new WCHAR[256];
 
 		pDrawEngine = new DrawEngine(hWnd);
-		if (pDrawEngine->CurrentState != STATE_IDLE)
+		if (pDrawEngine->CurrentState != DrawEngineState::DES_IDLE)
 		{
 			LPWSTR ErrorMessage = new WCHAR[100];
 			StringCbPrintf(ErrorMessage, 100 * 2, L"Error, while creating DirectDraw context, on state: %c", pDrawEngine->CurrentState);
@@ -109,7 +111,9 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 			delete pDrawEngine;
 			pDrawEngine = nullptr;
 		}
-		CreateThread(NULL, NULL, RenderThread, pDrawEngine, NULL, NULL);
+		//CreateThread(NULL, NULL, RenderThread, pDrawEngine, NULL, NULL);
+		pEngine = new PCEngineRenderer(ENGINEWIDTH, ENGINEHEIGHT);
+		pDrawEngine->PushRenderer(pEngine);
 		Sleep(1000);
 		break;
 	case WM_PAINT:
@@ -131,6 +135,11 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 		break;
 	case WM_KEYDOWN:
 		if (wParam == VK_ESCAPE) DestroyWindow(hWnd);
+		if (wParam == VK_F2)
+		{
+			pDrawEngine->Render();
+			InvalidateRect(hWnd, NULL, false);
+		}
 		break;
 	case WM_SIZE:
 		pDrawEngine->Render();

@@ -21,5 +21,4 @@
 #include <strsafe.h>
 #include "DrawEngine.h"
 
-
 // TODO: reference additional headers your program requires here

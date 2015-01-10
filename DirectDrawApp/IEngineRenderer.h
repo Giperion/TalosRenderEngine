@@ -8,9 +8,8 @@ public:
 	int x;
 	int y;
 
-	virtual byte* GetRenderFrame() = 0;
-	virtual void Render() = 0;
+	virtual pFrame GetRenderFrame();
+	virtual void Render();
 
 	virtual ~IEngineRenderer();
 };
-

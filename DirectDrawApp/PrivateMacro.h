@@ -4,6 +4,8 @@
 //Просто показатель что функция экспериментальная
 #define EXPERIMENTAL
 
+#define pFrame byte*
+
 //Указывает что функция еще не заимплементена
 #define NYI
 
@@ -33,13 +35,7 @@
 
 #pragma region DrawEngineStateNumbers
 
-#define STATE_IDLE 0
-#define STATE_DDRAWCREATEFAILED 1
-//Undocumentated state's between 1 to 7 - some init error's. Must be catched only in debugger
-#define STATE_RENDER_IN_PROGRESS 25
-#define STATE_RENDER_FINISHED 42
-#define STATE_REQUEST_NEW_FRAME 14
-#define STATE_SHUTINGDOWN 55
+
 
 #pragma endregion
 
