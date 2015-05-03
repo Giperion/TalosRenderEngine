@@ -6,8 +6,26 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 Window::Window(WindowParam param, HINSTANCE instance, int nCmdShow)
 {
+	if (param.type == WindowType::WT_Graphic)
+	{
+		
+	}
+	else if (param.type == WindowType::WT_Console)
+	{
+		if (!AllocConsole())
+		{
+			ExitProcess(1);
+		}
+		SetConsoleTitle(L"Log");
+	}
+	else
+	{
+		MessageBox(NULL, L"Undefined window type! Can't continue.", L"Critical Error", MB_OK | MB_ICONERROR);
+		ExitProcess(1);
+	}
+
 	RunMutex = false;
-	this->coord = param;
+	this->Description = param;
 	this->instance = instance;
 	this->nCmdShow = nCmdShow;
 }
@@ -68,6 +86,10 @@ DWORD Window::Go(WNDPROC proc)
 
 Window::~Window()
 {
+	if (Description.type == WindowType::WT_Console)
+	{
+		FreeConsole();
+	}
 }
 
 LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -114,7 +136,6 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 		//CreateThread(NULL, NULL, RenderThread, pDrawEngine, NULL, NULL);
 		pEngine = new PCEngineRenderer(ENGINEWIDTH, ENGINEHEIGHT);
 		pDrawEngine->PushRenderer(pEngine);
-		Sleep(1000);
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);

@@ -22,6 +22,15 @@
 #define ENGINEWIDTH 1920
 #define ENGINEHEIGHT 1080
 
+/*
+Метод отображения на экран.
+0 - DirectDraw
+1 - OpenGL
+2 - GDI
+*/
+
+#define VISUALMETHOD 1
+
 
 #if (ENGINEHEIGHT % 2) != 0
 #error "В текущей реализации нужна нормальная высота"

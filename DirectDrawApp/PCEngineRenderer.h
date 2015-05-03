@@ -11,17 +11,24 @@ enum RendererState
 	RS_SHUTINGDOWN
 };
 
+enum PCEngineMode {
+	PC_MODE_STANDART,
+	PC_MODE_BLOCK10,
+	PC_MODE_BLOCK6
+};
+
+
 class PCEngineRenderer :
 	public IEngineRenderer
 {
 public:
-	PCEngineRenderer(int width, int height);
+	PCEngineRenderer(int width, int height, PCEngineMode mode = PCEngineMode::PC_MODE_STANDART);
 	~PCEngineRenderer();
 	virtual void Render();
 	virtual pFrame GetRenderFrame();
 
 	int GetUsedCores();
-
+	bool mutex;
 
 	//Thread Entry Point, DO NOT CALL EXTERNAL! : Не вызывайте эти методы где либо еще!
 	DWORD MainThread(LPVOID param);
@@ -35,6 +42,11 @@ private:
 	RenderSatelliteInfo* m_RSI;
 	//Текущеё состояние
 	RendererState CurrentState;
+	//Режим рендера
+	PCEngineMode mode;
+
+	//живых потоков
+	DWORD aliveCores;
 	//Utility
 	int GetProcessorCoresCount();
 	//DebugColorMethod

@@ -11,7 +11,7 @@
 #undef WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-
+#define VELIYA_DEBUG
 
 // C RunTime Header Files
 #include <stdlib.h>

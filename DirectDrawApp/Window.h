@@ -23,7 +23,7 @@ private:
 
 	int nCmdShow;
 	HINSTANCE instance;
-	WindowParam coord;
+	WindowParam Description;
 
 	LPWSTR StatusText;
 	DrawEngine* pDrawEngine;

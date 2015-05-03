@@ -6,22 +6,24 @@ DrawEngine::DrawEngine(HWND hWnd, PresentMethod PMethod)
 {
 	AttachedHWND = hWnd;
 
+	presentMethod = PMethod;
+
 	CurrentState = DrawEngineState::DES_INIT;
 
 	switch (presentMethod)
 	{
-	case DirectDraw:
+	case PM_DirectDraw:
 		if (!InitDirectDraw())
 		{
 			MessageBox(AttachedHWND, L"DirectDraw init error!", L"Critical error", MB_OK | MB_ICONERROR);
 		}
 		break;
-	case GDI:
+	case PM_GDI:
 		MessageBox(AttachedHWND, L"GDI present method not implemented!", L"Error", MB_OK | MB_ICONERROR);
 		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
 		break;
-	case DirectX:
-		MessageBox(AttachedHWND, L"DirectX present method not implemented!", L"Error", MB_OK | MB_ICONERROR);
+	case PM_OpenGL:
+		MessageBox(AttachedHWND, L"OpenGL present method not implemented!", L"Error", MB_OK | MB_ICONERROR);
 		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
 		break;
 	default:
@@ -111,12 +113,29 @@ bool DrawEngine::InitDirectDraw()
 	return true;
 }
 
+bool DrawEngine::InitOpenGL()
+{
+	gl = OpenGL::GetInstance();
+	if (!gl->CreateCompatableOpenGLHandle(AttachedHWND))
+	{
+		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
+		return false;
+	}
+	if (!gl->CreateOpenGLHandle(AttachedHWND))
+	{
+		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
+		return false;
+	}
+	
+
+}
+
 DrawEngine::~DrawEngine()
 {
 	int Timer = 0;
 	while (CurrentState != DrawEngineState::DES_IDLE)
 	{
-		//’ьюстон, у нас тут рендеринг досихпор.
+		//’ьюстон, у нас тут рендеринг до сих пор.
 		Sleep(5);
 		Timer++;
 		if (Timer > 120)
@@ -134,18 +153,17 @@ DrawEngine::~DrawEngine()
 		delete renderers[real];
 		PopRenderer();
 	}
-	Sleep(400);
 
 	switch (presentMethod)
 	{
-	case DirectDraw:
+	case PM_DirectDraw:
 		ShutDownDirectDraw();
 		break;
-	case GDI:
+	case PM_GDI:
 		MessageBox(AttachedHWND, L"GDI present method can't be deinitialized!", L"Critical Error", MB_OK | MB_ICONERROR);
 		break;
-	case DirectX:
-		MessageBox(AttachedHWND, L"DirectX present method can't be deinitialized!", L"Critical Error", MB_OK | MB_ICONERROR);
+	case PM_OpenGL:
+		MessageBox(AttachedHWND, L"OpenGL present method can't be deinitialized!", L"Critical Error", MB_OK | MB_ICONERROR);
 		break;
 	default:
 		MessageBox(AttachedHWND, L"Undefined deinit method called!", L"Critical Error", MB_OK | MB_ICONERROR);
@@ -251,12 +269,25 @@ bool DrawEngine::Render()
 		}
 		for (int i = 0; i < renderers.size(); i++)
 		{
-			pFrame newFrame = renderers[i]->GetRenderFrame();
-			pBackSurface->Lock(NULL, &DirectSurfaceDesc, DDLOCK_WAIT, NULL);
-			int Allbytes = DirectSurfaceDesc.lPitch * DirectSurfaceDesc.dwHeight;
-			unsigned char* VideoMemory = static_cast <unsigned char*> (DirectSurfaceDesc.lpSurface);
-			memcpy(VideoMemory, newFrame, Allbytes);
-			pBackSurface->Unlock(DirectSurfaceDesc.lpSurface);
+			switch (presentMethod)
+			{
+			case PM_DirectDraw:
+				pFrame newFrame = renderers[i]->GetRenderFrame();
+				pBackSurface->Lock(NULL, &DirectSurfaceDesc, DDLOCK_WAIT, NULL);
+				int Allbytes = DirectSurfaceDesc.lPitch * DirectSurfaceDesc.dwHeight;
+				unsigned char* VideoMemory = static_cast <unsigned char*> (DirectSurfaceDesc.lpSurface);
+				memcpy(VideoMemory, newFrame, Allbytes);
+				pBackSurface->Unlock(DirectSurfaceDesc.lpSurface);
+				break;
+			case PM_GDI:
+				break;
+			case PM_OpenGL:
+
+				break;
+			default:
+				break;
+			}
+
 
 		}
 		trWindow.x = 0; trWindow.y = 0;

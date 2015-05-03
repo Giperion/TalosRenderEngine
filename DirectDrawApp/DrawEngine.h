@@ -1,7 +1,10 @@
 #ifndef __DrawEngine
 #define __DrawEngine
 #include <Windows.h>
+
 #include <ddraw.h>
+#include "OpenGL.h"
+
 #include "PrivateMacro.h"
 #include <deque>
 #include "IEngineRenderer.h"
@@ -26,9 +29,24 @@ enum DrawEngineState : int
 
 enum PresentMethod : byte
 {
-	DirectDraw,
-	GDI,
-	DirectX
+	PM_DirectDraw,
+	PM_GDI,
+	PM_OpenGL
+};
+
+enum EngineType : byte
+{
+	ET_Unknow,
+	ET_Native,
+	ET_CUDA,
+	ET_OpenCL,
+	ET_OpenGL
+};
+
+enum WindowType
+{
+	WT_Graphic,
+	WT_Console
 };
 
 struct Color
@@ -37,11 +55,13 @@ struct Color
 	byte G;
 	byte B;
 };
+
+
 class DrawEngine
 {
 public:
 	volatile DrawEngineState CurrentState;
-	DrawEngine(HWND hWnd, PresentMethod PMethod = DirectDraw);
+	DrawEngine(HWND hWnd, PresentMethod PMethod = PM_DirectDraw);
 
 	EXPERIMENTAL void DrawTest();
 	EXPERIMENTAL DWORD WINAPI ThreadEntryPoint(DWORD param);
@@ -74,8 +94,10 @@ public:
 
 	//Windows and screen buffer
 	HWND AttachedHWND;
-	
 
+	//OpenGL
+	OpenGL* gl;
+	
 	//DirectDraw
 	LPDIRECTDRAW pDirectDraw;
 
@@ -94,17 +116,19 @@ private:
 
 	//InitPresenters
 	bool InitDirectDraw();
+	bool InitOpenGL();
 
 	//DeInitPresenters
 
 	void ShutDownDirectDraw();
+	void ShutDownOpenGL();
 
 	//Bliters
 	void BltMainBuffer();
 
 	pFrame Blt_DirectDraw();
 	pFrame Blt_GDI();
-	pFrame Blt_DirectX();
+	pFrame Blt_OpenGL();
 };
 
 struct WindowParam
@@ -113,6 +137,7 @@ struct WindowParam
 	int height;
 	int x;
 	int y;
+	WindowType type;
 };
 
 struct RenderSatelliteInfo
