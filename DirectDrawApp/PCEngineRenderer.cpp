@@ -100,7 +100,7 @@ PCEngineRenderer::PCEngineRenderer(int width, int height, PCEngineMode mode)
 	CurrentState = RS_IDLE;
 }
 
-void PCEngineRenderer::Render()
+void PCEngineRenderer::Render(RenderArgs* args)
 {
 	if (CurrentState == RS_IDLE)
 	{

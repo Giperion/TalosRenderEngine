@@ -1,6 +1,7 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include <math.h>
-
+#include "resource.h"
+#pragma warning( disable : 4566 )
 
 DrawEngine::DrawEngine(HWND hWnd, PresentMethod PMethod)
 {
@@ -10,12 +11,17 @@ DrawEngine::DrawEngine(HWND hWnd, PresentMethod PMethod)
 
 	CurrentState = DrawEngineState::DES_INIT;
 
+	LastRenderTime = 0.0;
+
+	QueryPerformanceFrequency(&frequency);
+
 	switch (presentMethod)
 	{
 	case PM_DirectDraw:
 		if (!InitDirectDraw())
 		{
 			MessageBox(AttachedHWND, L"DirectDraw init error!", L"Critical error", MB_OK | MB_ICONERROR);
+			return;
 		}
 		break;
 	case PM_GDI:
@@ -23,8 +29,11 @@ DrawEngine::DrawEngine(HWND hWnd, PresentMethod PMethod)
 		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
 		break;
 	case PM_OpenGL:
-		MessageBox(AttachedHWND, L"OpenGL present method not implemented!", L"Error", MB_OK | MB_ICONERROR);
-		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
+		if (!InitOpenGL())
+		{
+			MessageBox(AttachedHWND, L"OpenGL init error!", L"Error", MB_OK | MB_ICONERROR);
+			return;
+		}
 		break;
 	default:
 		MessageBox(AttachedHWND, L"Undefined present method is choosen!", L"Critical Error", MB_OK | MB_ICONERROR);
@@ -126,8 +135,13 @@ bool DrawEngine::InitOpenGL()
 		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
 		return false;
 	}
-	
-
+	Log::GetInstance()->PrintMsg(gl->GetDeviceInfo());
+	if (!PreparePlaneScene())
+	{
+		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
+		return false;
+	}
+	return true;
 }
 
 DrawEngine::~DrawEngine()
@@ -135,7 +149,7 @@ DrawEngine::~DrawEngine()
 	int Timer = 0;
 	while (CurrentState != DrawEngineState::DES_IDLE)
 	{
-		//�������, � ��� ��� ��������� �� ��� ���.
+		//Õüþñòîí, ó íàñ òóò ðåíäåðèíã äî ñèõ ïîð.
 		Sleep(5);
 		Timer++;
 		if (Timer > 120)
@@ -149,8 +163,6 @@ DrawEngine::~DrawEngine()
 	InterlockedExchange((unsigned int*)&CurrentState, (unsigned int)DrawEngineState::DES_SHUTINGDOWN);
 	for (int i = renderers.size(); i > 0; i--)
 	{
-		int real = i - 1;
-		delete renderers[real];
 		PopRenderer();
 	}
 
@@ -163,7 +175,10 @@ DrawEngine::~DrawEngine()
 		MessageBox(AttachedHWND, L"GDI present method can't be deinitialized!", L"Critical Error", MB_OK | MB_ICONERROR);
 		break;
 	case PM_OpenGL:
-		MessageBox(AttachedHWND, L"OpenGL present method can't be deinitialized!", L"Critical Error", MB_OK | MB_ICONERROR);
+		if (gl != nullptr)
+		{
+			delete gl;
+		}
 		break;
 	default:
 		MessageBox(AttachedHWND, L"Undefined deinit method called!", L"Critical Error", MB_OK | MB_ICONERROR);
@@ -184,6 +199,10 @@ void DrawEngine::ShutDownDirectDraw()
 	pDirectDraw = nullptr;
 }
 
+void DrawEngine::ShutDownOpenGL()
+{
+	delete gl;
+}
 
 EXPERIMENTAL void DrawEngine::DrawTest()
 {
@@ -229,12 +248,22 @@ void NYI DrawEngine::SetPresentMethod(PresentMethod newPresentMethod)
 
 void DrawEngine::PushRenderer(IEngineRenderer* iRenderer)
 {
-	if (CurrentState != DES_IDLE)
+	if (CurrentState == DES_IDLE)
 	{
-		MessageBox(AttachedHWND, L"Trying add new render while DrawEngine not initialized", L"Critical Error", MB_OK | MB_ICONERROR);
-	}
-	else
-	{
+		//if OpenGL we need create a framebufffer
+		if (presentMethod == PresentMethod::PM_OpenGL)
+		{
+			GLuint newFrame;
+#ifdef OPENGL_BLT_TEX
+			glGenTextures(1, &newFrame);
+			glBindTexture(GL_TEXTURE_2D, newFrame);
+			glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, ENGINEWIDTH, ENGINEHEIGHT);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			FrameBuffers.push_back(newFrame);
+#else
+
+#endif
+		}
 		renderers.push_back(iRenderer);
 	}
 }
@@ -243,16 +272,26 @@ void DrawEngine::PopRenderer()
 {
 	if (renderers.size() > 0)
 	{
+		delete renderers[renderers.size() - 1];
 		renderers.pop_back();
 	}
 }
 
 //TODO a normal blitter
-bool DrawEngine::Render()
+bool DrawEngine::Render(RenderArgs* args)
 {
 	RECT rcSource;
 	RECT rcDest;
 	POINT trWindow;
+	unsigned char* VideoMemory = 0;
+	int Allbytes = 0;
+	pFrame newFrame = 0;
+
+	LARGE_INTEGER result;
+
+	QueryPerformanceCounter(&startTime);
+	
+
 
 	if (!(renderers.size() > 0))
 	{
@@ -265,24 +304,55 @@ bool DrawEngine::Render()
 		CurrentState = DrawEngineState::DES_REQUEST_NEW_FRAME;
 		for (int i = 0; i < renderers.size(); i++)
 		{
-			renderers[i]->Render();
+			renderers[i]->Render(args);
 		}
 		for (int i = 0; i < renderers.size(); i++)
 		{
 			switch (presentMethod)
 			{
 			case PM_DirectDraw:
-				pFrame newFrame = renderers[i]->GetRenderFrame();
+				newFrame = renderers[i]->GetRenderFrame();
 				pBackSurface->Lock(NULL, &DirectSurfaceDesc, DDLOCK_WAIT, NULL);
-				int Allbytes = DirectSurfaceDesc.lPitch * DirectSurfaceDesc.dwHeight;
-				unsigned char* VideoMemory = static_cast <unsigned char*> (DirectSurfaceDesc.lpSurface);
+				Allbytes = DirectSurfaceDesc.lPitch * DirectSurfaceDesc.dwHeight;
+				VideoMemory = static_cast <unsigned char*> (DirectSurfaceDesc.lpSurface);
 				memcpy(VideoMemory, newFrame, Allbytes);
 				pBackSurface->Unlock(DirectSurfaceDesc.lpSurface);
+
+				trWindow.x = 0; trWindow.y = 0;
+				ClientToScreen(AttachedHWND, &trWindow);
+				GetClientRect(AttachedHWND, &rcDest);
+				OffsetRect(&rcDest, trWindow.x, trWindow.y);
+				SetRect(&rcSource, 0, 0, ENGINEWIDTH, ENGINEHEIGHT);
+				pPrimarySurface->Blt(&rcDest, pBackSurface, &rcSource, DDBLT_WAIT, NULL);
 				break;
 			case PM_GDI:
+
+
 				break;
 			case PM_OpenGL:
+				//Test Draw
+#ifdef OPENGL_BLT_TEX
+				GLuint Tex = FrameBuffers[i];
+				pFrame newFrame = renderers[i]->GetRenderFrame();
+				glBindTexture(GL_TEXTURE_2D, Tex);
+				glTexSubImage2D(GL_TEXTURE_2D, 1, 0, 0, ENGINEWIDTH, ENGINEHEIGHT, GL_RGBA, GL_UNSIGNED_INT, newFrame);
+#endif
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+				glViewport(0, 0, ENGINEWIDTH, ENGINEHEIGHT);
+				glBindVertexArray(DefaultVertexArrayID);
+				glBindBuffer(GL_ARRAY_BUFFER, DefaultVertexBufferID);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, DefaultVertexIndexID);
+				glUseProgramObjectARB(DefaultShaderObject);
 
+				//this is texture 2D handle
+				newFrame = renderers[i]->GetRenderFrame();
+				glBindTexture(GL_TEXTURE_2D, (GLuint)newFrame);
+				glUniform1i(0, 0);
+				glActiveTexture(GL_TEXTURE0);
+
+				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0);
+				gl->OGLSwapBuffers();
+				
 				break;
 			default:
 				break;
@@ -290,12 +360,12 @@ bool DrawEngine::Render()
 
 
 		}
-		trWindow.x = 0; trWindow.y = 0;
-		ClientToScreen(AttachedHWND, &trWindow);
-		GetClientRect(AttachedHWND, &rcDest);
-		OffsetRect(&rcDest, trWindow.x, trWindow.y);
-		SetRect(&rcSource, 0, 0, ENGINEWIDTH, ENGINEHEIGHT);
-		pPrimarySurface->Blt(&rcDest, pBackSurface, &rcSource, DDBLT_WAIT, NULL);
+		QueryPerformanceCounter(&endTime);
+
+		result.QuadPart = endTime.QuadPart - startTime.QuadPart;
+		result.QuadPart *= 1000;
+		LastRenderTime = (double)result.QuadPart / (double)frequency.QuadPart;
+
 		CurrentState = DrawEngineState::DES_IDLE;
 		return true;
 	}
@@ -308,11 +378,223 @@ void DrawEngine::PostRender(double RenderTime)
 	LastRenderTime = RenderTime;
 }
 
+GLCALL bool DrawEngine::PreparePlaneScene()
+{
+	Log* log = Log::GetInstance();
+	static const GLchar viboLabel[] = "DefaultModel Vertex Index Buffer";
+
+
+	glGenVertexArrays(1, &DefaultVertexArrayID);
+	glBindVertexArray(DefaultVertexArrayID);
+
+	static const GLchar vboLabel[] = "DefaultModel Vertex Buffer";
+	glGenBuffers(1, &DefaultVertexBufferID);
+	glBindBuffer(GL_ARRAY_BUFFER, DefaultVertexBufferID);
+	int sizeofVB = sizeof(vboLabel);
+	glObjectLabel(GL_BUFFER, DefaultVertexBufferID, sizeofVB, &vboLabel[0]);
+
+
+	glGenBuffers(1, &DefaultVertexIndexID);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, DefaultVertexIndexID);
+	sizeofVB = sizeof(viboLabel);
+	glObjectLabel(GL_BUFFER, DefaultVertexIndexID, sizeofVB, &viboLabel[0]);
+
+	
+
+	static const GLfloat vertexs[]
+	{
+		-1.0f, 1.0f, 0.0f,
+		-1.0f, -1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f
+	};
+	static const GLfloat TexUV[]
+	{
+		0.0f, 1.0f,
+		0.0f, 0.0f,
+		1.0f, 0.0f,
+		1.0f, 1.0f
+	};
+
+	static const GLuint indexes[]
+	{
+		0, 1, 2,
+		2, 3, 0
+	};
+	DWORD elemSize = sizeof(GLfloat);
+	DWORD vertSize = sizeof(vertexs);
+	DWORD uvSize = sizeof(TexUV);
+
+	glBufferData(GL_ARRAY_BUFFER, vertSize + uvSize, 0, GL_STATIC_DRAW);
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, vertSize, &vertexs);
+	glBufferSubData(GL_ARRAY_BUFFER, vertSize, uvSize, &TexUV);
+
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indexes), &indexes, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, GL_FALSE, (void*)0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, GL_FALSE, (void*)vertSize);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+
+
+
+
+	//Setup shaders and material
+	LPCSTR vertexCode = nullptr;
+	LPCSTR fragmentCode = nullptr;
+
+	HRSRC hRes = FindResourceW(NULL, MAKEINTRESOURCE(IDR_VERTCODE), MAKEINTRESOURCE(RT_HTML));
+	HGLOBAL pCode = LoadResource(NULL, hRes);
+	vertexCode = (LPCSTR)pCode;
+
+	hRes = FindResourceW(NULL, MAKEINTRESOURCE(IDR_FRAGCODE), MAKEINTRESOURCE(RT_HTML));
+	pCode = LoadResource(NULL, hRes);
+	fragmentCode = (LPCSTR)pCode;
+
+	if (vertexCode == nullptr || fragmentCode == nullptr)
+	{
+		log->PrintMsg(UnicodeString(L"Фатальная ошибка! Отсутсвует код шейдеров: файлы VertexShader.glsl и FragmentShader.glsl"));
+		return false;
+	}
+
+	GLenum errorcode;
+	GLhandleARB VertexShader;
+	GLhandleARB PixelShader;
+
+
+
+	VertexShader = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
+	PixelShader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
+
+	glShaderSourceARB(VertexShader, 1, &vertexCode, NULL);
+	glShaderSourceARB(PixelShader, 1, &fragmentCode, NULL);
+
+	LPCSTR CompileLog = new char[1024];
+	GLint CompileStatus;
+	GLint InfoLogLenght = 0;
+
+	glCompileShaderARB(VertexShader);
+
+	glGetShaderiv(VertexShader, GL_COMPILE_STATUS, &CompileStatus);
+	glGetShaderiv(VertexShader, GL_INFO_LOG_LENGTH, &InfoLogLenght);
+	if (CompileStatus == GL_FALSE)
+	{
+		log->PrintMsg(UnicodeString ("Произошла ошибка при компиляции вертексного шейдера. Смотрите информацию ниже"));
+		glGetShaderInfoLog(VertexShader, 1024, NULL, (GLchar*)CompileLog);
+		UnicodeString& errorlog = UnicodeString(CompileLog, InfoLogLenght);
+		log->PrintMsg(UnicodeString(errorlog));
+
+		delete[] CompileLog;
+		glDeleteShader(VertexShader);
+		glDeleteShader(PixelShader);
+		return false;
+	}
+	if (InfoLogLenght > 1)
+	{
+		log->PrintMsg(UnicodeString("Вертексный шейдер скомпилирован, смотрите информацию ниже"));
+		glGetShaderInfoLog(VertexShader, 1024, 0, (GLchar*)CompileLog);
+		UnicodeString& infolog = UnicodeString(CompileLog, InfoLogLenght);
+		log->PrintMsg(UnicodeString(infolog));
+		ZeroMemory((void*)CompileLog, 1024);
+	}
+
+	glCompileShaderARB(PixelShader);
+
+	glGetShaderiv(PixelShader, GL_COMPILE_STATUS, &CompileStatus);
+	glGetShaderiv(PixelShader, GL_INFO_LOG_LENGTH, &InfoLogLenght);
+	if (CompileStatus == GL_FALSE)
+	{
+		log->PrintMsg(UnicodeString("Произошла ошибка при компиляции фрагментного шейдера. Смотрите информацию ниже"));
+		glGetShaderInfoLog(PixelShader, 1024, NULL, (GLchar*)CompileLog);
+		UnicodeString& errorlog = UnicodeString(CompileLog, InfoLogLenght);
+		log->PrintMsg(errorlog);
+
+		delete[] CompileLog;
+		glDeleteShader(VertexShader);
+		glDeleteShader(PixelShader);
+		return false;
+	}
+	if (InfoLogLenght > 1)
+	{
+		log->PrintMsg(UnicodeString("Пиксельный шейдер скомпилирован, смотрите информацию ниже"));
+		glGetShaderInfoLog(PixelShader, 1024, 0, (GLchar*)CompileLog);
+		UnicodeString& infolog = UnicodeString(CompileLog, InfoLogLenght);
+		log->PrintMsg(infolog);
+		ZeroMemory((void*)CompileLog, 1024);
+	}
+
+
+	DefaultShaderObject = glCreateProgramObjectARB();
+	glAttachObjectARB(DefaultShaderObject, VertexShader);
+
+	errorcode = glGetError();
+	if (errorcode != GL_NO_ERROR)
+	{
+		log->PrintMsg(UnicodeString("Неизвестная ошибка линковки шейдера"));
+		return false;
+	}
+
+	glAttachObjectARB(DefaultShaderObject, PixelShader);
+
+	errorcode = glGetError();
+	if (errorcode != GL_NO_ERROR)
+	{
+		log->PrintMsg(UnicodeString("Неизвестная ошибка линковки шейдера"));
+		return false;
+	}
+
+	glLinkProgramARB(DefaultShaderObject);
+	errorcode = glGetError();
+	if (errorcode != GL_NO_ERROR)
+	{
+		log->PrintMsg(UnicodeString("Неизвестная ошибка линковки программы"));
+		return false;
+	}
+
+	delete[] CompileLog;
+
+	glUseProgramObjectARB(DefaultShaderObject);
+	//We leave active shader program and scene
+	return true;
+}
+
 inline int Lerp(int start, int end, double value)
 {
 	return start + (end - start) * value;
 }
 
+LPCSTR DrawEngine::LoadShaderCodeInternal(LPCWSTR filename)
+{
+	Log* log = Log::GetInstance();
+	HANDLE ShaderFile = CreateFile(filename, GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (ShaderFile == INVALID_HANDLE_VALUE)
+	{
+		log->PrintMsg(UnicodeString("Файл шейдера по-умолчанию не найден\n"));
+		return nullptr;
+	}
+
+	LARGE_INTEGER shadersize;
+	GetFileSizeEx(ShaderFile, &shadersize);
+	if (shadersize.HighPart != NULL)
+	{
+		log->PrintMsg(UnicodeString("Размер внутреннего шейдера слишком большой\n"));
+		CloseHandle(ShaderFile);
+		return nullptr;
+	}
+	if (shadersize.LowPart == NULL)
+	{
+		log->PrintMsg(UnicodeString("Файл шейдера пустой\n"));
+		CloseHandle(ShaderFile);
+		return nullptr;
+	}
+	LPCSTR ShaderCode = new char[shadersize.LowPart];
+	ZeroMemory((void*)ShaderCode, shadersize.LowPart);
+	DWORD bytereaded;
+	ReadFile(ShaderFile, (LPVOID)ShaderCode, shadersize.LowPart - 1, &bytereaded, NULL);
+	CloseHandle(ShaderFile);
+	return ShaderCode;
+}
 Color DrawEngine::MandelbrotSet(const int x, const int y)
 {
 	Color result;
@@ -352,7 +634,7 @@ Color DrawEngine::MandelbrotSet(const int x, const int y)
 	}
 
 	double Value = (1.0 / (double)20) *  Iteration;
-	//������ ���������� ���� �� �������, �� ���, ��� �� ����������� ������
+	//Ðàíüøå âîçâðàùàëè öâåò ïî òàáëèöå, íî óâû, ýòî íå ýôôåêòèâíûé ñïîñîá
 	//return ResoulveColor(Iteration);
 	int grayscaleComp = Lerp(0, 255, Value);
 	

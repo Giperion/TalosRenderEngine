@@ -1,4 +1,9 @@
 #pragma once
+struct RenderArgs
+{
+	void* args;
+	size_t size;
+};
 class IEngineRenderer
 {
 public:
@@ -9,7 +14,8 @@ public:
 	int y;
 
 	virtual pFrame GetRenderFrame();
-	virtual void Render();
+	virtual void Render(RenderArgs* args);
 
 	virtual ~IEngineRenderer();
 };
+

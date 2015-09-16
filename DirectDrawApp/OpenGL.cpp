@@ -1,4 +1,4 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include "OpenGL.h"
 
 OpenGL* OpenGL::instance = nullptr;
@@ -39,6 +39,7 @@ void APIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severi
 		break;
 	}
 	str += UnicodeString(message, length);
+	str += L'\n';
 	Log::GetInstance()->PrintMsg(str);
 }
 #endif
@@ -67,6 +68,7 @@ bool OpenGL::CreateCompatableOpenGLHandle(HWND target, bool JustCheck)
 	static PIXELFORMATDESCRIPTOR pfd;
 	ZeroMemory(&pfd, sizeof(pfd));
 	CurrentThreadID = GetCurrentThreadId();
+	targetWindow = target;
 
 	pfd.nSize = sizeof(pfd);
 	pfd.nVersion = 1;
@@ -76,8 +78,7 @@ bool OpenGL::CreateCompatableOpenGLHandle(HWND target, bool JustCheck)
 	pfd.cColorBits = 32;
 	pfd.cStencilBits = 8;
 	pfd.iLayerType = PFD_MAIN_PLANE;
-	targetWindow = target;
-	CurrentDrawContext = GetWindowDC (target);
+	CurrentDrawContext = GetWindowDC(targetWindow);
 	int PixelFormat;
 	PixelFormat = ChoosePixelFormat(CurrentDrawContext, &pfd);
 	if (PixelFormat == 0)
@@ -125,8 +126,9 @@ bool OpenGL::CreateOpenGLHandle(HWND target)
 {
 	if (WGLEW_ARB_create_context && WGLEW_ARB_pixel_format)
 	{
+		targetWindow = target;
 		CurrentThreadID = GetCurrentThreadId();
-		CurrentDrawContext = GetWindowDC(target);
+		CurrentDrawContext = GetDC(targetWindow);
 		PIXELFORMATDESCRIPTOR pfd;
 		ZeroMemory(&pfd, sizeof(pfd));
 		const int PixelFormat[]
@@ -145,7 +147,7 @@ bool OpenGL::CreateOpenGLHandle(HWND target)
 		const int ContextAttrib[]
 		{
 			WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-				WGL_CONTEXT_MINOR_VERSION_ARB, 4,
+				WGL_CONTEXT_MINOR_VERSION_ARB, 0,
 				WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB | WGL_CONTEXT_DEBUG_BIT_ARB,
 				0
 		};
@@ -154,7 +156,7 @@ bool OpenGL::CreateOpenGLHandle(HWND target)
 		const int ContextAttrib[]
 		{
 			WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-				WGL_CONTEXT_MINOR_VERSION_ARB, 4,
+				WGL_CONTEXT_MINOR_VERSION_ARB, 0,
 				WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
 				0
 		};
@@ -184,6 +186,9 @@ bool OpenGL::CreateOpenGLHandle(HWND target)
 			GLDEBUGPROC procfunc = (GLDEBUGPROC)&DebugCallback;
 			glDebugMessageCallback(procfunc, nullptr);
 			glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+			//disable 'other' and 'perfomance' msg type, because it's too spammable
+			glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_OTHER, GL_DONT_CARE, 0, nullptr, GL_FALSE);
+			glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_PERFORMANCE, GL_DONT_CARE, 0, nullptr, GL_FALSE);
 #endif
 			glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
 			Inited = true;
@@ -208,18 +213,18 @@ UnicodeString OpenGL::GetDeviceInfo()
 	
 	if (CurrentContext == nullptr)
 	{
-		return L"Ïîïûòêà ïîëó÷èòü äàííûå âèäåîóñêîğèòåëÿ, ïğè íåèíèöèàëèçîâàíîì OpenGL!";
+		return L"ĞŸĞ¾Ğ¿Ñ‹Ñ‚ĞºĞ° Ğ¿Ğ¾Ğ»ÑƒÑ‡Ğ¸Ñ‚ÑŒ Ğ´Ğ°Ğ½Ğ½Ñ‹Ğµ Ğ²Ğ¸Ğ´ĞµĞ¾ÑƒÑĞºĞ¾Ñ€Ğ¸Ñ‚ĞµĞ»Ñ, Ğ¿Ñ€Ğ¸ Ğ½ĞµĞ¸Ğ½Ğ¸Ñ†Ğ¸Ğ°Ğ»Ğ¸Ğ·Ğ¾Ğ²Ğ°Ğ½Ğ¾Ğ¼ OpenGL!";
 	}
 	if (wglGetCurrentContext() == nullptr)
 	{
 		StopOpenGLOperations(GetCurrentThreadId());
-		return L"Ïîïûòêà ïîëó÷èòü äàííûå âèäåîóñêîğèòåëÿ, â ïîòîêå, êîòîğûé íå ïğèñâîèë ñåáå OGL êîíòåêñò!";
+		return L"ĞŸĞ¾Ğ¿Ñ‹Ñ‚ĞºĞ° Ğ¿Ğ¾Ğ»ÑƒÑ‡Ğ¸Ñ‚ÑŒ Ğ´Ğ°Ğ½Ğ½Ñ‹Ğµ Ğ²Ğ¸Ğ´ĞµĞ¾ÑƒÑĞºĞ¾Ñ€Ğ¸Ñ‚ĞµĞ»Ñ, Ğ² Ğ¿Ğ¾Ñ‚Ğ¾ĞºĞµ, ĞºĞ¾Ñ‚Ğ¾Ñ€Ñ‹Ğ¹ Ğ½Ğµ Ğ¿Ñ€Ğ¸ÑĞ²Ğ¾Ğ¸Ğ» ÑĞµĞ±Ğµ OGL ĞºĞ¾Ğ½Ñ‚ĞµĞºÑÑ‚!";
 	}
 	const GLubyte* Test = glGetString(GL_VENDOR);
 	GLenum error = glGetError();
 	if (error == GL_INVALID_OPERATION)
 	{
-		return L"Íåäîïóñòèìàÿ îïåğàöèÿ, ïğè ïîëó÷åíèé äàííûõ âèäåîóñêîğèòåëÿ";
+		return L"ĞĞµĞ´Ğ¾Ğ¿ÑƒÑÑ‚Ğ¸Ğ¼Ğ°Ñ Ğ¾Ğ¿ĞµÑ€Ğ°Ñ†Ğ¸Ñ, Ğ¿Ñ€Ğ¸ Ğ¿Ğ¾Ğ»ÑƒÑ‡ĞµĞ½Ğ¸Ğ¹ Ğ´Ğ°Ğ½Ğ½Ñ‹Ñ… Ğ²Ğ¸Ğ´ĞµĞ¾ÑƒÑĞºĞ¾Ñ€Ğ¸Ñ‚ĞµĞ»Ñ";
 	}
 
 	LPCSTR Vendor = (LPCSTR)glGetString(GL_VENDOR);
@@ -227,7 +232,7 @@ UnicodeString OpenGL::GetDeviceInfo()
 	LPCSTR Version = (LPCSTR)glGetString(GL_VERSION);
 	LPCSTR ShaderVersion = (LPCSTR)glGetString(GL_SHADING_LANGUAGE_VERSION_ARB);
 	LPSTR Total = new char[765];
-	wsprintfA(Total, "\r\nVideo card vendor is: %hs \r\nRenderer is: %hs \r\nOpenGL Version: %hs \r\nGLSL Shader version: %hs ", Vendor, Renderer, Version, ShaderVersion);
+	wsprintfA(Total, "\r\nVideo card vendor is: %hs \r\nRenderer is: %hs \r\nOpenGL Version: %hs \r\nGLSL Shader version: %hs\r\n", Vendor, Renderer, Version, ShaderVersion);
 	UnicodeString test = UnicodeString(Total);
 	delete[] Total;
 	return test;
@@ -245,13 +250,14 @@ OpenGL::~OpenGL()
 	{
 		wglMakeCurrent(NULL, NULL);
 		wglDeleteContext(CurrentContext);
+		ReleaseDC(targetWindow, CurrentDrawContext);
 	}
 }
 /*
-Ñîçäàåò íîâûé áëîê äàííûõ â âèäåîïàìÿòè, è ñîçäàåò óêàçàòåëè â ïàìÿòè ïğèëîæåíèÿ
-Äëÿ êàæäîãî âûçîâà AllocateBuffer íóæíî äåëàòü âûçîâ Release Buffer
-target - òèï áóôåğà GL_ARRAY_BUFFER, GL_ATOMIC_COUNTER_BUFFER, GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, GL_DRAW_INDIRECT_BUFFER, GL_DISPATCH_INDIRECT_BUFFER, GL_ELEMENT_ARRAY_BUFFER, GL_PIXEL_PACK_BUFFER, GL_PIXEL_UNPACK_BUFFER, GL_QUERY_BUFFER, GL_SHADER_STORAGE_BUFFER, GL_TEXTURE_BUFFER, GL_TRANSFORM_FEEDBACK_BUFFER or GL_UNIFORM_BUFFER
-BufferSize - ğàçìåğ áóôåğà
+Ã‘Ã®Ã§Ã¤Ã Ã¥Ã² Ã­Ã®Ã¢Ã»Ã© Ã¡Ã«Ã®Ãª Ã¤Ã Ã­Ã­Ã»Ãµ Ã¢ Ã¢Ã¨Ã¤Ã¥Ã®Ã¯Ã Ã¬Ã¿Ã²Ã¨, Ã¨ Ã±Ã®Ã§Ã¤Ã Ã¥Ã² Ã³ÃªÃ Ã§Ã Ã²Ã¥Ã«Ã¨ Ã¢ Ã¯Ã Ã¬Ã¿Ã²Ã¨ Ã¯Ã°Ã¨Ã«Ã®Ã¦Ã¥Ã­Ã¨Ã¿
+Ã„Ã«Ã¿ ÃªÃ Ã¦Ã¤Ã®Ã£Ã® Ã¢Ã»Ã§Ã®Ã¢Ã  AllocateBuffer Ã­Ã³Ã¦Ã­Ã® Ã¤Ã¥Ã«Ã Ã²Ã¼ Ã¢Ã»Ã§Ã®Ã¢ Release Buffer
+target - Ã²Ã¨Ã¯ Ã¡Ã³Ã´Ã¥Ã°Ã  GL_ARRAY_BUFFER, GL_ATOMIC_COUNTER_BUFFER, GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, GL_DRAW_INDIRECT_BUFFER, GL_DISPATCH_INDIRECT_BUFFER, GL_ELEMENT_ARRAY_BUFFER, GL_PIXEL_PACK_BUFFER, GL_PIXEL_UNPACK_BUFFER, GL_QUERY_BUFFER, GL_SHADER_STORAGE_BUFFER, GL_TEXTURE_BUFFER, GL_TRANSFORM_FEEDBACK_BUFFER or GL_UNIFORM_BUFFER
+BufferSize - Ã°Ã Ã§Ã¬Ã¥Ã° Ã¡Ã³Ã´Ã¥Ã°Ã 
 */
 void* OpenGL::AllocateBuffer(GLenum target, size_t BufferSize)
 {
@@ -262,9 +268,9 @@ void* OpenGL::AllocateBuffer(GLenum target, size_t BufferSize)
 	return glMapBuffer(target, GL_READ_WRITE);
 }
 /*
-Çàâåğøàåò ğåäàêòèğîâàíèå íîâîãî áóôåğà è íàïğàâëÿåò äàííûå â âèäåîïàìÿòü.
-Äëÿ êàæäîãî âûçîâà AllocateBuffer íóæíî äåëàòü ReleaseBuffer
-target - òèï áóôåğà
+Ã‡Ã Ã¢Ã¥Ã°Ã¸Ã Ã¥Ã² Ã°Ã¥Ã¤Ã ÃªÃ²Ã¨Ã°Ã®Ã¢Ã Ã­Ã¨Ã¥ Ã­Ã®Ã¢Ã®Ã£Ã® Ã¡Ã³Ã´Ã¥Ã°Ã  Ã¨ Ã­Ã Ã¯Ã°Ã Ã¢Ã«Ã¿Ã¥Ã² Ã¤Ã Ã­Ã­Ã»Ã¥ Ã¢ Ã¢Ã¨Ã¤Ã¥Ã®Ã¯Ã Ã¬Ã¿Ã²Ã¼.
+Ã„Ã«Ã¿ ÃªÃ Ã¦Ã¤Ã®Ã£Ã® Ã¢Ã»Ã§Ã®Ã¢Ã  AllocateBuffer Ã­Ã³Ã¦Ã­Ã® Ã¤Ã¥Ã«Ã Ã²Ã¼ ReleaseBuffer
+target - Ã²Ã¨Ã¯ Ã¡Ã³Ã´Ã¥Ã°Ã 
 */
 void OpenGL::ReleaseBuffer(GLenum target)
 {
@@ -276,7 +282,7 @@ void OpenGL::FreeBuffer(GLuint BufferID)
 	GLboolean isBuffer = glIsBuffer(BufferID);
 	if (isBuffer == GL_FALSE)
 	{
-		//Debug::Log(L"(LOW LEVEL CODE) Íåâîçìîæíî óäàëèòü áóôåğ! Âîçìîæíà ïîğ÷à êó÷è! Îòìåíà îïåğàöèè...", true);
+		//Debug::Log(L"(LOW LEVEL CODE) ÃÃ¥Ã¢Ã®Ã§Ã¬Ã®Ã¦Ã­Ã® Ã³Ã¤Ã Ã«Ã¨Ã²Ã¼ Ã¡Ã³Ã´Ã¥Ã°! Ã‚Ã®Ã§Ã¬Ã®Ã¦Ã­Ã  Ã¯Ã®Ã°Ã·Ã  ÃªÃ³Ã·Ã¨! ÃÃ²Ã¬Ã¥Ã­Ã  Ã®Ã¯Ã¥Ã°Ã Ã¶Ã¨Ã¨...", true);
 	}
 	else
 	{
@@ -307,12 +313,17 @@ UnicodeString OpenGL::GetExtension()
 	return result;
 }
 
+bool OpenGL::OGLSwapBuffers()
+{
+	return SwapBuffers(CurrentDrawContext);
+}
+
 void OpenGL::StartOpenGLOperations(DWORD ThreadID)
 {
 	//OpenGL* p_gl = OpenGL::GetInstance();
 	//if (p_gl == nullptr)
 	//{
-	//	//Debug::ErrorLog(L"(LOW LEVEL CODE) Ïîïûòêà âûïîëíèòü OGL îïåğàöèè, ïğè íåèíèöèàëèçèğîâàíîì êîíòåêñòå OGL!", true);
+	//	//Debug::ErrorLog(L"(LOW LEVEL CODE) ÃÃ®Ã¯Ã»Ã²ÃªÃ  Ã¢Ã»Ã¯Ã®Ã«Ã­Ã¨Ã²Ã¼ OGL Ã®Ã¯Ã¥Ã°Ã Ã¶Ã¨Ã¨, Ã¯Ã°Ã¨ Ã­Ã¥Ã¨Ã­Ã¨Ã¶Ã¨Ã Ã«Ã¨Ã§Ã¨Ã°Ã®Ã¢Ã Ã­Ã®Ã¬ ÃªÃ®Ã­Ã²Ã¥ÃªÃ±Ã²Ã¥ OGL!", true);
 	//	return;
 	//}
 	//while (!p_gl->AreYouReady())
@@ -331,7 +342,7 @@ void OpenGL::StopOpenGLOperations(DWORD ThreadID)
 	//OpenGL* p_gl = OpenGL::GetInstance();
 	//if (p_gl == nullptr)
 	//{
-	//	Debug::ErrorLog(L"(LOW LEVEL CODE) Ïîïûòêà çàêîí÷èòü OGL îïåğàöèè, ïğè óäàëåíîì êîíòåêñòå OGL!", true);
+	//	Debug::ErrorLog(L"(LOW LEVEL CODE) ÃÃ®Ã¯Ã»Ã²ÃªÃ  Ã§Ã ÃªÃ®Ã­Ã·Ã¨Ã²Ã¼ OGL Ã®Ã¯Ã¥Ã°Ã Ã¶Ã¨Ã¨, Ã¯Ã°Ã¨ Ã³Ã¤Ã Ã«Ã¥Ã­Ã®Ã¬ ÃªÃ®Ã­Ã²Ã¥ÃªÃ±Ã²Ã¥ OGL!", true);
 	//	return;
 	//}
 	//p_gl->CurrentThreadID = -1;

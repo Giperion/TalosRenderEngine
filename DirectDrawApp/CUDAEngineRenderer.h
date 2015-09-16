@@ -1,5 +1,10 @@
 #pragma once
 #include "IEngineRenderer.h"
+#include "GPUImage.h"
+
+
+//CUDA C API
+#include "EngineCuda_C.cuh"
 
 enum CERModes
 {
@@ -16,6 +21,9 @@ enum CERStatus
 	CudaStatus_IDLE,
 
 };
+
+
+
 class CUDAEngineRenderer :
 	public IEngineRenderer
 {
@@ -25,6 +33,12 @@ public:
 
 	//Thread entry point
 	DWORD MainThread(LPVOID param);
+
+	virtual pFrame GetRenderFrame();
+	virtual void Render(RenderArgs* args);
 private:
+	GPUImage* mainFrame;
+
 	void* memAlloc(size_t size);
 };
+

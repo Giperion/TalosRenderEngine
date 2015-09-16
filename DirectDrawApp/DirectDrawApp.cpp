@@ -1,4 +1,4 @@
-// DirectDrawApp.cpp : Defines the entry point for the application.
+﻿// DirectDrawApp.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
@@ -36,7 +36,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	Window* wConsole = new Window(consoleParam, nullptr, 0);
 	Log* log = Log::GetInstance();
-	log->PrintMsg(UnicodeString(L"Hello %d\n"), 145);
+	log->PrintMsg(UnicodeString(L"Veliya Engine initialize routine start...\n"));
+	log->PrintMsg(UnicodeString(L"Привет мир!"));
 
 	DWORD returnResult = window->Go(WndProc);
 	delete window;

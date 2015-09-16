@@ -11,6 +11,7 @@ private:
 	static Log* instance;
 	LPWSTR MsgBuffer;
 	HANDLE stdOut;
+	CRITICAL_SECTION log_locker;
 	Log();
 
 };

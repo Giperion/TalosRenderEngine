@@ -7,6 +7,7 @@
 
 #include "PrivateMacro.h"
 #include <deque>
+#include <vector>
 #include "IEngineRenderer.h"
 
 enum RenderMethod : byte
@@ -49,12 +50,7 @@ enum WindowType
 	WT_Console
 };
 
-struct Color
-{
-	byte R;
-	byte G;
-	byte B;
-};
+
 
 
 class DrawEngine
@@ -67,7 +63,7 @@ public:
 	EXPERIMENTAL DWORD WINAPI ThreadEntryPoint(DWORD param);
 	
 	//RenderEngine command
-	bool Render();
+	bool Render(RenderArgs* args);
 	void PostRender(double RenderTime);
 
 	bool NYI SetScreenBufferSize(int width, int height);
@@ -112,6 +108,10 @@ private:
 	RenderMethod renderMethod;
 	PresentMethod presentMethod;
 
+	LARGE_INTEGER startTime;
+	LARGE_INTEGER endTime;
+	LARGE_INTEGER frequency;
+
 	std::deque <IEngineRenderer*> renderers;
 
 	//InitPresenters
@@ -126,9 +126,16 @@ private:
 	//Bliters
 	void BltMainBuffer();
 
-	pFrame Blt_DirectDraw();
-	pFrame Blt_GDI();
-	pFrame Blt_OpenGL();
+	void Blt_DirectDraw();
+	void Blt_GDI();
+	void Blt_OpenGL();
+
+	GLuint DefaultVertexArrayID;
+	GLuint DefaultVertexBufferID;
+	GLuint DefaultVertexIndexID;
+	GLhandleARB DefaultShaderObject;
+	GLCALL bool PreparePlaneScene();
+	LPCSTR LoadShaderCodeInternal(LPCWSTR filename);
 };
 
 struct WindowParam

@@ -9,6 +9,7 @@ Log::Log()
 	stdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	MsgBuffer = new wchar_t[512];
 	ZeroMemory(MsgBuffer, sizeof(wchar_t)* 512);
+	InitializeCriticalSectionAndSpinCount(&log_locker, 100);
 }
 
 Log* Log::GetInstance()
@@ -40,6 +41,7 @@ void Log::SetHandleFile()
 Log::~Log()
 {
 	delete[] MsgBuffer;
+	DeleteCriticalSection(&log_locker);
 }
 
 
@@ -53,7 +55,7 @@ void Log::PrintMsg(UnicodeString& format, ...)
 	LPCVOID buf = format.getTerminatedBuffer();
 	DWORD len = format.length();
 	va_start(args, format);
-
+	EnterCriticalSection(&log_locker);
 	if (FAILED(
 		StringCbVPrintfExW(MsgBuffer, 512 * sizeof(wchar_t), NULL, &unusedBytes, 0, (LPWSTR)buf, args)))
 	{
@@ -66,8 +68,10 @@ void Log::PrintMsg(UnicodeString& format, ...)
 	int newLen = (1024 - unusedBytes) / 2;
 
 	BOOL result = WriteConsoleW(stdOut, MsgBuffer, newLen, &writtenChar, NULL);
+	LeaveCriticalSection(&log_locker);
 	if (!result)
 	{
 		WriteFile(stdOut, buf, len * sizeof(wchar_t), &writtenChar, NULL);
 	}
 }
+

@@ -24,7 +24,7 @@ class PCEngineRenderer :
 public:
 	PCEngineRenderer(int width, int height, PCEngineMode mode = PCEngineMode::PC_MODE_STANDART);
 	~PCEngineRenderer();
-	virtual void Render();
+	virtual void Render(RenderArgs* args);
 	virtual pFrame GetRenderFrame();
 
 	int GetUsedCores();

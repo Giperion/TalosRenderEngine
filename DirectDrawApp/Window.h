@@ -1,6 +1,8 @@
 #pragma once
 #include "PrivateMacro.h"
 #include "resource.h"
+#include "PCEngineRenderer.h"
+#include "CUDAEngineRenderer.h"
 
 class Window
 {
@@ -27,6 +29,9 @@ private:
 
 	LPWSTR StatusText;
 	DrawEngine* pDrawEngine;
+
+	RenderArgs* pRenderParam;
+	MandelbrotView* mView;
 
 	bool RunMutex;
 };

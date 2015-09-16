@@ -1,33 +1,42 @@
-#include "cuda_runtime.h"
-
-#define CENGINE_STATUS_INIT -1
-#define CENGINE_STATUS_NOCUDA -2
-#define CENGINE_STATUS_IDLE 1
-#define CENGINE_STATUS_RENDERING 2
-#define CENGINE_STATUS_RECONFIGURATE 3
-#define CENGINE_STATUS_RENDERFINISHED 4
-#define CENGINE_STATUS_FATALERROR 999
-
-//Êîä ïîä âîïðîñîì (Êîä ïîä êîòîì, äîî)
-#define CENGINE_MAX_CUDA_RESOURCES 256
-
+ï»¿#include "cuda_runtime.h"
+#include "math_functions.h"
+#include "EngineCuda_C.cuh"
 
 extern "C"
 {
-	//Êàê òóò â âàøåì Ñ óñòðîèòü îáúåêòû, à?...
+	//ÐšÐ°Ðº Ñ‚ÑƒÑ‚ Ð² Ð²Ð°ÑˆÐµÐ¼ Ð¡ ÑƒÑÑ‚Ñ€Ð¾Ð¸Ñ‚ÑŒ Ð¾Ð±ÑŠÐµÐºÑ‚Ñ‹, Ð°?...
 	int status;
 	int ResourceCounter;
 	wchar_t* DebugMessage;
-
+	int BestDeviceID;
+	cudaError_t errcode;
 	//device specific
 	int cores;
 
+	void* argsMem;
+
 	/*
-	* Ïî òåêóùåé ðåàëèçàöèè øèðèíà êàäðà ôîðìèðóåòñÿ çíà÷åíèåì ìàêñèìàëüíîãî ÷èñëà ïîòîêîâ íà áëîê
-	* Âñå ïîòîìó ÷òî ïîêà ÷òî çàäà÷à êèäàåòñÿ ïî òèïó: Îäíà ëèíèÿ êàäðà = Îäèí áëîê
-	* ×òî ïîçâîëÿåò ïî ìàêñèìóìó ñîçäàòü áëîêè è ïîòîêè çà îäèí âûçîâ.
+	* ÐŸÐ¾ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¹ Ñ€ÐµÐ°Ð»Ð¸Ð·Ð°Ñ†Ð¸Ð¸ ÑˆÐ¸Ñ€Ð¸Ð½Ð° ÐºÐ°Ð´Ñ€Ð° Ñ„Ð¾Ñ€Ð¼Ð¸Ñ€ÑƒÐµÑ‚ÑÑ Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸ÐµÐ¼ Ð¼Ð°ÐºÑÐ¸Ð¼Ð°Ð»ÑŒÐ½Ð¾Ð³Ð¾ Ñ‡Ð¸ÑÐ»Ð° Ð¿Ð¾Ñ‚Ð¾ÐºÐ¾Ð² Ð½Ð° Ð±Ð»Ð¾Ðº
+	* Ð’ÑÐµ Ð¿Ð¾Ñ‚Ð¾Ð¼Ñƒ Ñ‡Ñ‚Ð¾ Ð¿Ð¾ÐºÐ° Ñ‡Ñ‚Ð¾ Ð·Ð°Ð´Ð°Ñ‡Ð° ÐºÐ¸Ð´Ð°ÐµÑ‚ÑÑ Ð¿Ð¾ Ñ‚Ð¸Ð¿Ñƒ: ÐžÐ´Ð½Ð° Ð»Ð¸Ð½Ð¸Ñ ÐºÐ°Ð´Ñ€Ð° = ÐžÐ´Ð¸Ð½ Ð±Ð»Ð¾Ðº
+	* Ð§Ñ‚Ð¾ Ð¿Ð¾Ð·Ð²Ð¾Ð»ÑÐµÑ‚ Ð¿Ð¾ Ð¼Ð°ÐºÑÐ¸Ð¼ÑƒÐ¼Ñƒ ÑÐ¾Ð·Ð´Ð°Ñ‚ÑŒ Ð±Ð»Ð¾ÐºÐ¸ Ð¸ Ð¿Ð¾Ñ‚Ð¾ÐºÐ¸ Ð·Ð° Ð¾Ð´Ð¸Ð½ Ð²Ñ‹Ð·Ð¾Ð².
 	*/
 	int height;
+
+	__device__ int getGlobalIdx_1D_2D()
+	{
+			return blockIdx.x * blockDim.x * blockDim.y
+				+ threadIdx.y * blockDim.x + threadIdx.x;
+	}
+
+	__device__ int getGlobalIdx_2D_2D()
+	{
+			int blockId = blockIdx.x
+				+ blockIdx.y * gridDim.x;
+			int threadId = blockId * (blockDim.x * blockDim.y)
+				+ (threadIdx.y * blockDim.x)
+				+ threadIdx.x;
+			return threadId;
+		}
 
 	inline int GetBestDeviceID(int Count)
 	{
@@ -55,7 +64,7 @@ extern "C"
 
 		if (deviceProhibitenCounter == Count)
 		{
-			//Òÿæåëûé ñëó÷àé
+			//Ã’Ã¿Ã¦Ã¥Ã«Ã»Ã© Ã±Ã«Ã³Ã·Ã Ã©
 			DebugMessage = L"All devices in the system prohibiten computeMode. Please google it, and try again.";
 			status = CENGINE_STATUS_FATALERROR;
 			return -1;
@@ -63,20 +72,18 @@ extern "C"
 		return BestComputeDevice;
 	}
 	
-	static struct cudaImage
+	const char* GetErrorString(cudaError_t errcode)
 	{
-		int width;
-		int height;
-		size_t bytes;
-		void* cudaData;
-	};
+		return cudaGetErrorString(errcode);
+	}
+
 
 	bool cuda_init()
 	{
 		status = CENGINE_STATUS_INIT;
 		DebugMessage = L" ";
-		cudaError_t errcode;
 		ResourceCounter = 0;
+		argsMem = nullptr;
 		//Determine if we have CUDA device?
 		int Count;
 		cudaDeviceProp deviceProp;
@@ -95,27 +102,29 @@ extern "C"
 			status = CENGINE_STATUS_NOCUDA;
 			return false;
 		}
-		int DeviceID;
-		errcode = cudaGetDevice(&DeviceID);
+		int DeviceID = 0;
 
 		//Several devices?
 		if (Count > 1)
 		{
 			DebugMessage = L"Several devices detected! At this point there is no sync code to provide multidevice rendering, sorry.\nHowewer we choose the most powerfull device in the system...";
 			//Use a best device. Also check compute_mode prohibiten
-			int BestDeviceID = GetBestDeviceID(Count);
+			BestDeviceID = GetBestDeviceID(Count);
+			errcode = cudaSetDevice(BestDeviceID);
 			if (BestDeviceID == -1) return false;
 		}
 		else
 		{
 			//if only one device, we at least must check is compute mode is prohibiten?
-			cudaGetDeviceProperties(&deviceProp, DeviceID);
+			errcode = cudaGetDeviceProperties(&deviceProp, DeviceID);
 			if (deviceProp.computeMode == cudaComputeMode::cudaComputeModeProhibited)
 			{
 				status = CENGINE_STATUS_FATALERROR;
 				DebugMessage = L"Device computeMode set to prohibiten! Can't compute!";
 				return false;
 			}
+			BestDeviceID = DeviceID;
+			errcode = cudaSetDevice(BestDeviceID);
 		}
 
 		//Get device stuff
@@ -125,13 +134,15 @@ extern "C"
 		return true;
 	}
 
+
+
 	cudaImage cuda_AllocTexture(int width, int height)
 	{
 		cudaImage result;
 		result.width = width;
 		result.height = height;
 		result.bytes = (width * height) * 3;
-
+		
 		ResourceCounter++;
 		if (ResourceCounter == CENGINE_MAX_CUDA_RESOURCES)
 		{
@@ -165,6 +176,111 @@ extern "C"
 	void cuda_execCode(char* code)
 	{
 
+	}
+	void WaitCudaThread()
+	{
+		cudaDeviceSynchronize();
+	}
+
+	cudaError_t temp_callKernels(int width, int height, pFrame frame, void* args, int argsSize)
+	{
+		dim3 grid (256, 256, 1);
+		dim3 blocks(width / grid.x, height / grid.y, 1);
+		if (argsMem != nullptr) cudaFree(argsMem);
+		
+		errcode = cudaConfigureCall(grid, blocks);
+
+		errcode = cudaSetupArgument(&width, sizeof(int), 0);
+		errcode = cudaSetupArgument(&height,sizeof(int), sizeof (int));
+		errcode = cudaSetupArgument(&frame,sizeof(pFrame), sizeof (int)* 2);
+		if (args != nullptr)
+		{
+			errcode = cudaMalloc(&argsMem, argsSize);
+			errcode = cudaMemcpy(argsMem, args, argsSize, cudaMemcpyKind::cudaMemcpyHostToDevice);
+			errcode = cudaSetupArgument(&argsMem, sizeof(void*), sizeof(int) * 2 + sizeof(pFrame));
+		}
+
+
+		errcode = cudaLaunch(testKernelFunc);
+
+		return errcode;
+		//testKernelFunc <<<grid, blocks >>> (width, height, frame);
+	}
+
+	__device__ inline int Lerp(int start, int end, double value)
+	{
+		return start + (end - start) * value;
+	}
+
+	//dim3 blockIdx <- gridDim
+	//dim3 threadIdx <- blocks
+
+	__global__ void testKernelFunc(int width, int height, pFrame frame, void* args)
+	{
+		//init pointers and pixel coord
+		//compute target pixel index for thread and block
+		int posX = threadIdx.x + (blockIdx.x * blockDim.x);
+		int posY = threadIdx.y + (blockIdx.y * blockDim.y);
+
+		Color* mainFrame = (Color*)frame;
+		MandelbrotView* mView = (MandelbrotView*)args;
+		double Scale = mView->scale;
+
+		int newIndex = (posY * width) + posX;
+
+		Color& target = mainFrame[newIndex];
+
+
+		int x = posX;
+		int y = posY;
+
+		double centerX = -0.5;
+		double centerY = 0.5;
+
+		double ResultX;
+		double ResultY;
+
+		double Zx = 0;
+		double Zy = 0;
+		double Zx_x2 = 0;
+		double Zy_x2 = 0;
+
+		const double MinimumResultX = centerX - Scale;
+		const double MaximumResultX = centerX + Scale;
+		const double MinimumResultY = centerY - Scale;
+		const double MaximumResultY = centerY + Scale;
+
+		
+		double PixelWidth = (MaximumResultX - MinimumResultX) / width;
+		double PixelHeight = (MaximumResultY - MinimumResultY) / height;
+
+
+		int Iteration = 0;
+		int MaxIteration = mView->iteration;
+		
+		const double EscapeRadius = 2.0L;
+		double EscapeRadius_x2 = EscapeRadius * EscapeRadius;
+
+		ResultX = (MinimumResultX + PixelWidth * x) + mView->x;
+		ResultY = (MinimumResultY + PixelHeight * y) + mView->y;
+
+		if (fabs(ResultY) < PixelHeight / 2) ResultY = 0.0;
+
+		for (; Iteration < MaxIteration && ((Zx_x2 + Zy_x2) < EscapeRadius_x2); Iteration++)
+		{
+			Zy = 2 * Zx * Zy + ResultY;
+			Zx = Zx_x2 - Zy_x2 + ResultX;
+			Zx_x2 = Zx * Zx;
+			Zy_x2 = Zy * Zy;
+		}
+
+		double Value = (1.0 / (double)80) *  Iteration;
+		//ÃÃ Ã­Ã¼Ã¸Ã¥ Ã¢Ã®Ã§Ã¢Ã°Ã Ã¹Ã Ã«Ã¨ Ã¶Ã¢Ã¥Ã² Ã¯Ã® Ã²Ã Ã¡Ã«Ã¨Ã¶Ã¥, Ã­Ã® Ã³Ã¢Ã», Ã½Ã²Ã® Ã­Ã¥ Ã½Ã´Ã´Ã¥ÃªÃ²Ã¨Ã¢Ã­Ã»Ã© Ã±Ã¯Ã®Ã±Ã®Ã¡
+		//return ResoulveColor(Iteration);
+		int grayscaleComp = Lerp(0, 255, Value);
+
+		target.R = grayscaleComp; target.G = grayscaleComp; target.B = grayscaleComp;
+		target.A = 255;
 	}
 
 
