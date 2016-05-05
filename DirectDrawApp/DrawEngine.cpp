@@ -204,6 +204,29 @@ void DrawEngine::ShutDownOpenGL()
 	delete gl;
 }
 
+U_ICU_NAMESPACE::UnicodeString DrawEngine::GetTextFromStatus(DrawEngineState status)
+{
+	switch (status)
+	{
+	case DES_INIT:
+		return UnicodeString(L"DES_INIT");
+	case DES_IDLE:
+		return UnicodeString(L"DES_IDLE");
+	case DES_PRESENTERFAILED:
+		return UnicodeString(L"DES_PRESENTERFAILED");
+	case DES_RENDER_IN_PROGRESS:
+		return UnicodeString(L"DES_RENDER_IN_PROGRESS");
+	case DES_RENDER_FINISHED:
+		return UnicodeString(L"DES_RENDER_FINISHED");
+	case DES_REQUEST_NEW_FRAME:
+		return UnicodeString(L"DES_REQUEST_NEW_FRAME");
+	case DES_SHUTINGDOWN:
+		return UnicodeString(L"DES_SHUTINGDOWN");
+	default:
+		return UnicodeString(L"UNDEFINED");
+	}
+}
+
 EXPERIMENTAL void DrawEngine::DrawTest()
 {
 	memset(&DirectSurfaceDesc, 0, sizeof (DDSURFACEDESC));
@@ -264,7 +287,16 @@ void DrawEngine::PushRenderer(IEngineRenderer* iRenderer)
 
 #endif
 		}
-		renderers.push_back(iRenderer);
+		RendererStatus status = iRenderer->RenderInit(presentMethod, this);
+		
+		if (status == RSTATUS_OK)
+			renderers.push_back(iRenderer);
+		else
+			Log::GetInstance()->PrintMsg(UnicodeString(L"DrawEngine::PushRenderer: Renderer initialization failed"));
+	}
+	else
+	{
+		Log::GetInstance()->PrintMsg(UnicodeString(L"DrawEngine::PushRenderer: Calling while DrawEngine in state: ") + GetTextFromStatus(CurrentState));
 	}
 }
 
@@ -346,6 +378,7 @@ bool DrawEngine::Render(RenderArgs* args)
 
 				//this is texture 2D handle
 				newFrame = renderers[i]->GetRenderFrame();
+				if (newFrame == nullptr) break;
 				glBindTexture(GL_TEXTURE_2D, (GLuint)newFrame);
 				glUniform1i(0, 0);
 				glActiveTexture(GL_TEXTURE0);

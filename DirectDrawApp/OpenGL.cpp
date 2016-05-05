@@ -83,12 +83,12 @@ bool OpenGL::CreateCompatableOpenGLHandle(HWND target, bool JustCheck)
 	PixelFormat = ChoosePixelFormat(CurrentDrawContext, &pfd);
 	if (PixelFormat == 0)
 	{
-		log->PrintMsg(UnicodeString(L"ChoosePixelFormat failed! Function: CreateCompatableOpenGLHandle\n"));
+		log->PrintMsg(UnicodeString(L"ChoosePixelFormat failed! Function: CreateCompatableOpenGLHandle"));
 		return false;
 	}
 	if (SetPixelFormat(CurrentDrawContext, PixelFormat, &pfd) == FALSE)
 	{
-		log->PrintMsg(UnicodeString(L"SetPixelFormat failed! Function: CreateCompatableOpenGLHandle\n"));
+		log->PrintMsg(UnicodeString(L"SetPixelFormat failed! Function: CreateCompatableOpenGLHandle"));
 		return false;
 	}
 
@@ -96,13 +96,13 @@ bool OpenGL::CreateCompatableOpenGLHandle(HWND target, bool JustCheck)
 	hrc = wglCreateContext(CurrentDrawContext);
 	if (wglMakeCurrent(CurrentDrawContext, hrc) == FALSE)
 	{
-		log->PrintMsg(UnicodeString(L"wglMakeCurrent failed! Function: CreateCompatableOpenGLHandle\n"));
+		log->PrintMsg(UnicodeString(L"wglMakeCurrent failed! Function: CreateCompatableOpenGLHandle"));
 		return false;
 	}
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
 	{
-		log->PrintMsg(UnicodeString(L"Glew initialization failed. Are you have OpenGL driver? Function: CreateCompatableOpenGLHandle\n"));
+		log->PrintMsg(UnicodeString(L"Glew initialization failed. Are you have OpenGL driver? Function: CreateCompatableOpenGLHandle"));
 		return false;
 	}
 
@@ -114,11 +114,11 @@ bool OpenGL::CreateCompatableOpenGLHandle(HWND target, bool JustCheck)
 		targetWindow = 0;
 		CurrentDrawContext = 0;
 		CurrentContext = 0;
-		log->PrintMsg(UnicodeString(L"Compatable OpenGL device created, trying create full device handle\n"));
+		log->PrintMsg(UnicodeString(L"Compatable OpenGL device created, trying create full device handle"));
 		return true;
 	}
 	CurrentContext = hrc;
-	log->PrintMsg(UnicodeString(L"Compatable OpenGL device created!\n"));
+	log->PrintMsg(UnicodeString(L"Compatable OpenGL device created!"));
 	return true;
 }
 
@@ -151,7 +151,7 @@ bool OpenGL::CreateOpenGLHandle(HWND target)
 				WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB | WGL_CONTEXT_DEBUG_BIT_ARB,
 				0
 		};
-		log->PrintMsg(UnicodeString(L"Warning: OpenGL debug logging system enabled!\n"));
+		log->PrintMsg(UnicodeString(L"Warning: OpenGL debug logging system enabled!"));
 #else
 		const int ContextAttrib[]
 		{
@@ -165,12 +165,12 @@ bool OpenGL::CreateOpenGLHandle(HWND target)
 		int iPixelFormat, NumFormat;
 		if (wglChoosePixelFormatARB(CurrentDrawContext, PixelFormat, NULL, 1, &iPixelFormat, (UINT*)(&NumFormat)) == FALSE)
 		{
-			log->PrintMsg(UnicodeString(L"wglChoosePixelFormatARB failed. Function: CreateOpenGLHandle\n"));
+			log->PrintMsg(UnicodeString(L"wglChoosePixelFormatARB failed. Function: CreateOpenGLHandle"));
 			return false;
 		}
 		if (SetPixelFormat(CurrentDrawContext, iPixelFormat, &pfd) == FALSE)
 		{
-			log->PrintMsg(UnicodeString(L"SetPixelFormat failed. Function: CreateOpenGLHandle\n"));
+			log->PrintMsg(UnicodeString(L"SetPixelFormat failed. Function: CreateOpenGLHandle"));
 			return false;
 		}
 
@@ -179,7 +179,7 @@ bool OpenGL::CreateOpenGLHandle(HWND target)
 		{
 			wglMakeCurrent(CurrentDrawContext, hrc);
 			OpenGL::CurrentContext = hrc;
-			log->PrintMsg(UnicodeString(L"CreateOpenGLHandle success!\n\n"));
+			log->PrintMsg(UnicodeString(L"CreateOpenGLHandle success!"));
 
 #ifdef VELIYA_DEBUG
 			glEnable(GL_DEBUG_OUTPUT);
@@ -197,13 +197,13 @@ bool OpenGL::CreateOpenGLHandle(HWND target)
 		}
 		else
 		{
-			log->PrintMsg(UnicodeString(L"wglCreateContextAttribsARB failed. Function: CreateOpenGLHandle\n"));
+			log->PrintMsg(UnicodeString(L"wglCreateContextAttribsARB failed. Function: CreateOpenGLHandle"));
 			return false;
 		}
 	}
 	else
 	{
-		log->PrintMsg(UnicodeString(L"OpenGL 4.4 not supported. Please enable DirectDraw method, for rendering.\n"));
+		log->PrintMsg(UnicodeString(L"OpenGL 4.4 not supported. Please enable DirectDraw method, for rendering."));
 		return false;
 	}
 }

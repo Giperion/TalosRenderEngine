@@ -71,5 +71,16 @@ extern "C"
 	};
 }
 
+struct MandelbrotView
+{
+	double x;
+	double y;
+	double scale;
+	int iteration;
+};
+
+//for logging
+#define LOG(message) Log::GetInstance()->PrintMsg(UnicodeString(#message))
+
 #endif
 

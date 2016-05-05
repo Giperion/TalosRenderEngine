@@ -1,5 +1,6 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include "PCEngineRenderer.h"
+#include "GPUImage.h"
 
 struct EngineThreadInitInfo
 {
@@ -12,37 +13,46 @@ inline int Lerp(int start, int end, double value)
 	return start + (end - start) * value;
 }
 
-Color MandelbrotSet(const int x, const int y)
+Color MandelbrotSet(const int x, const int y, const void* args)
 {
-	Color result;
+	Color target;
 
-	l_long ResultX;
-	l_long ResultY;
+	MandelbrotView* mView = (MandelbrotView*)args;
+	double Scale = mView->scale;
 
-	l_long Zx = 0;
-	l_long Zy = 0;
-	l_long Zx_x2 = 0;
-	l_long Zy_x2 = 0;
+	double centerX = -0.5;
+	double centerY = 0.5;
 
-	const l_long MinimumResultX = -2.5L;
-	const l_long MaximumResultX = 1.5L;
-	const l_long MinimumResultY = -2.0L;
-	const l_long MaximumResultY = 2.0L;
+	double ResultX;
+	double ResultY;
 
-	l_long PixelWidth = (MaximumResultX - MinimumResultX) / ENGINEWIDTH;
-	l_long PixelHeight = (MaximumResultY - MinimumResultY) / ENGINEHEIGHT;
+	double Zx = 0;
+	double Zy = 0;
+	double Zx_x2 = 0;
+	double Zy_x2 = 0;
+
+	const double MinimumResultX = centerX - Scale;
+	const double MaximumResultX = centerX + Scale;
+	const double MinimumResultY = centerY - Scale;
+	const double MaximumResultY = centerY + Scale;
+
+
+	double PixelWidth = (MaximumResultX - MinimumResultX) / ENGINEWIDTH;
+	double PixelHeight = (MaximumResultY - MinimumResultY) / ENGINEHEIGHT;
+
 
 	int Iteration = 0;
+	int MaxIteration = mView->iteration;
 
-	const l_long EscapeRadius = 2.0L;
-	l_long EscapeRadius_x2 = EscapeRadius * EscapeRadius;
+	const double EscapeRadius = 2.0L;
+	double EscapeRadius_x2 = EscapeRadius * EscapeRadius;
 
-	ResultX = (MinimumResultX + PixelWidth * x) * 1.0;
-	ResultY = (MinimumResultY + PixelHeight * y) * 1.0;
+	ResultX = (MinimumResultX + PixelWidth * x) + mView->x;
+	ResultY = (MinimumResultY + PixelHeight * y) + mView->y;
 
 	if (fabs(ResultY) < PixelHeight / 2) ResultY = 0.0;
 
-	for (; Iteration < 20 && ((Zx_x2 + Zy_x2) < EscapeRadius_x2); Iteration++)
+	for (; Iteration < MaxIteration && ((Zx_x2 + Zy_x2) < EscapeRadius_x2); Iteration++)
 	{
 		Zy = 2 * Zx * Zy + ResultY;
 		Zx = Zx_x2 - Zy_x2 + ResultX;
@@ -50,13 +60,14 @@ Color MandelbrotSet(const int x, const int y)
 		Zy_x2 = Zy * Zy;
 	}
 
-	double Value = (1.0 / (double)20) *  Iteration;
-	//Ðàíüøå âîçâðàùàëè öâåò ïî òàáëèöå, íî óâû, ýòî íå ýôôåêòèâíûé ñïîñîá
+	double Value = (1.0 / (double)80) *  Iteration;
+	//ÃÃ Ã­Ã¼Ã¸Ã¥ Ã¢Ã®Ã§Ã¢Ã°Ã Ã¹Ã Ã«Ã¨ Ã¶Ã¢Ã¥Ã² Ã¯Ã® Ã²Ã Ã¡Ã«Ã¨Ã¶Ã¥, Ã­Ã® Ã³Ã¢Ã», Ã½Ã²Ã® Ã­Ã¥ Ã½Ã´Ã´Ã¥ÃªÃ²Ã¨Ã¢Ã­Ã»Ã© Ã±Ã¯Ã®Ã±Ã®Ã¡
 	//return ResoulveColor(Iteration);
 	int grayscaleComp = Lerp(0, 255, Value);
 
-	result.R = grayscaleComp; result.G = grayscaleComp; result.B = grayscaleComp;
-	return result;
+	target.R = grayscaleComp; target.G = grayscaleComp; target.B = grayscaleComp;
+	target.A = 255;
+	return target;
 }
 
 
@@ -92,6 +103,8 @@ PCEngineRenderer::PCEngineRenderer(int width, int height, PCEngineMode mode)
 	//Maybe control how many cores we needed to use??
 	UsedCores = GetProcessorCoresCount();
 
+	HardwareFrame = new GPUImage(width, height, GPUImgType::IT_OpenGL);
+
 	EngineThreadInitInfo* eti = new EngineThreadInitInfo;
 	eti->pEngine = this;
 	eti->param = 0;
@@ -102,6 +115,7 @@ PCEngineRenderer::PCEngineRenderer(int width, int height, PCEngineMode mode)
 
 void PCEngineRenderer::Render(RenderArgs* args)
 {
+	LastArgs = args->args;
 	if (CurrentState == RS_IDLE)
 	{
 		CurrentState = RS_REQUEST_NEW_FRAME;
@@ -118,6 +132,13 @@ int PCEngineRenderer::GetProcessorCoresCount()
 	ZeroMemory(&sysInfo, sizeof(SYSTEM_INFO));
 	GetNativeSystemInfo(&sysInfo);
 	return sysInfo.dwNumberOfProcessors;
+}
+
+void PCEngineRenderer::BlitToHardware()
+{
+	pFrame HardwareFramePtr = (pFrame) HardwareFrame->Bind();
+	memcpy(HardwareFramePtr, RenderFrame, (width * height) * 4);
+	HardwareFrame->UnBind();
 }
 
 DWORD PCEngineRenderer::SatelliteThread(LPVOID param)
@@ -151,7 +172,7 @@ render:
 		for (CurrentX = 0; CurrentX != EndX; CurrentX++)
 		{
 			//Add you Method here!
-			Color CurrentColor = MandelbrotSet(CurrentX, CurrentY);
+			Color CurrentColor = MandelbrotSet(CurrentX, CurrentY, LastArgs);
 			//Color CurrentColor = RandomMadness (CurrentX, CurrentY);
 			m_FrameChunk[CurrentByte] = CurrentColor.B;
 			m_FrameChunk[CurrentByte + 1] = CurrentColor.G;
@@ -172,7 +193,7 @@ render:
 	//End
 #pragma endregion
 
-	//Æäåì ïîêà îñòàëüíûå ïîòîêè äîðåíäåðÿò, ïðåæäå ÷åì âåðíåìñÿ ê íà÷àëó öèêëà
+	//Ð–Ð´ÐµÐ¼ Ð¿Ð¾ÐºÐ° Ð¾ÑÑ‚Ð°Ð»ÑŒÐ½Ñ‹Ðµ Ð¿Ð¾Ñ‚Ð¾ÐºÐ¸ Ð´Ð¾Ñ€ÐµÐ½Ð´ÐµÑ€ÑÑ‚, Ð¿Ñ€ÐµÐ¶Ð´Ðµ Ñ‡ÐµÐ¼ Ð²ÐµÑ€Ð½ÐµÐ¼ÑÑ Ðº Ð½Ð°Ñ‡Ð°Ð»Ñƒ Ñ†Ð¸ÐºÐ»Ð°
 	WaitForSingleObject(Event_RenderFinished, INFINITE);
 	goto render;
 
@@ -268,7 +289,7 @@ loopRender:
 		}
 	}
 	ResetEvent(Event_Render);
-	CurrentState = RS_RENDER_FINISHED;
+	CurrentState = RS_IDLE;
 	
 	ReadySignal = 0;
 	SetEvent(Event_RenderFinished);
@@ -291,7 +312,11 @@ pFrame PCEngineRenderer::GetRenderFrame()
 	{
 		WaitForSingleObject(Event_RenderFinished, INFINITE);
 	}
-	return RenderFrame;
+
+	//perform blt operation
+	BlitToHardware();
+
+	return (pFrame)HardwareFrame->GetGLHandle();
 }
 
 PCEngineRenderer::~PCEngineRenderer()
@@ -300,4 +325,5 @@ PCEngineRenderer::~PCEngineRenderer()
 	while (mutex) Sleep(5);
 	CloseHandle(Event_Render);
 	CloseHandle(Event_RenderFinished);
+	delete HardwareFrame;
 }

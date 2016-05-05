@@ -3,6 +3,7 @@
 #include "resource.h"
 #include "PCEngineRenderer.h"
 #include "CUDAEngineRenderer.h"
+#include "CLEngineRenderer.h"
 
 class Window
 {

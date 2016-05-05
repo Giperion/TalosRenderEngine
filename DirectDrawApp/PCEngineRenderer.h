@@ -6,7 +6,6 @@ enum RendererState
 	RS_INIT,
 	RS_IDLE,
 	RS_REQUEST_NEW_FRAME,
-	RS_RENDER_FINISHED,
 	RS_ReSetup,
 	RS_SHUTINGDOWN
 };
@@ -44,11 +43,14 @@ private:
 	RendererState CurrentState;
 	//Режим рендера
 	PCEngineMode mode;
+	void* LastArgs;
 
 	//живых потоков
 	DWORD aliveCores;
 	//Utility
 	int GetProcessorCoresCount();
+
+	void BlitToHardware();
 	//DebugColorMethod
 	Color ClearYellow(const int x, const int y);
 
@@ -59,5 +61,6 @@ private:
 	volatile DWORD ReadySignal;
 
 	//RenderFrames and chunks
+	class GPUImage* HardwareFrame;
 	pFrame RenderFrame;
 };

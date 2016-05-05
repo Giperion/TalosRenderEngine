@@ -130,6 +130,9 @@ private:
 	void Blt_GDI();
 	void Blt_OpenGL();
 
+	//utility stuff
+	UnicodeString GetTextFromStatus(DrawEngineState status);
+
 	GLuint DefaultVertexArrayID;
 	GLuint DefaultVertexBufferID;
 	GLuint DefaultVertexIndexID;

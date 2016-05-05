@@ -5,22 +5,41 @@
 extern "C"
 {
 	//Как тут в вашем С устроить объекты, а?...
-	int status;
-	int ResourceCounter;
-	wchar_t* DebugMessage;
-	int BestDeviceID;
-	cudaError_t errcode;
-	//device specific
-	int cores;
+	//global for all
+	typedef unsigned int DeviceToken;
+	typedef int EngineStatus;
 
-	void* argsMem;
+	struct EngineData
+	{
+		DeviceToken ActiveDevice;
+
+		int DeviceCount;
+		int ComputeDeviceCount;
+		DeviceToken* Devices;
+
+		//minimal specs
+		unsigned int ComputeMajor;
+		unsigned int ComputeMinor;
+	};
+
+	EngineData DataDesc;
+
+	EngineStatus status;
+	cudaError_t errcode;
+	wchar_t* DebugMessage;
+
+	int BestDeviceID;
+
+	void* argsMemTest;
+
+
+	int tempDevices[1024];
 
 	/*
 	* По текущей реализации ширина кадра формируется значением максимального числа потоков на блок
 	* Все потому что пока что задача кидается по типу: Одна линия кадра = Один блок
 	* Что позволяет по максимуму создать блоки и потоки за один вызов.
 	*/
-	int height;
 
 	__device__ int getGlobalIdx_1D_2D()
 	{
@@ -38,38 +57,54 @@ extern "C"
 			return threadId;
 		}
 
-	inline int GetBestDeviceID(int Count)
+	static inline void FastZeroMemory(void* dst, size_t Size)
 	{
-		int curDeviceID = 0;
-		int BestComputePower = 0;
-		int BestComputeDevice;
-		int deviceProhibitenCounter = 0;
-		cudaDeviceProp curDeviceProp;
-		while (curDeviceID < Count)
+		int Method = 0;
+
+		//memory aligned?
+		if (!(Size % 8))
 		{
-			cudaGetDeviceProperties(&curDeviceProp, curDeviceID);
-			if (curDeviceProp.computeMode != cudaComputeMode::cudaComputeModeProhibited)
-			{
-				if (curDeviceProp.major > 0 && curDeviceProp.major < 9999)
-				{
-					if (BestComputePower < curDeviceProp.major) BestComputeDevice = curDeviceID;
-				}
-			}
-			else
-			{
-				deviceProhibitenCounter++;
-			}
-			curDeviceID++;
+			Method = 1;
 		}
 
-		if (deviceProhibitenCounter == Count)
+		if (!(Size % 4) && Method == 0)
 		{
-			//Òÿæåëûé ñëó÷àé
-			DebugMessage = L"All devices in the system prohibiten computeMode. Please google it, and try again.";
-			status = CENGINE_STATUS_FATALERROR;
-			return -1;
+			Method = 2;
 		}
-		return BestComputeDevice;
+
+		int IterCount = Size;
+		byte* byteMem = (byte*)dst;
+		__int64* qwordMem = (__int64*)dst;
+		__int32* dwordMem = (__int32*)dst;
+
+		switch (Method)
+		{
+		case 0:
+			for (int i = 0; i < IterCount; i++)
+			{
+				*byteMem = 0;
+				byteMem++;
+			}
+			break;
+		case 1:
+			IterCount /= 8;
+			for (int i = 0; i < IterCount; i++)
+			{
+				*qwordMem = 0;
+				qwordMem++;
+			}
+			break;
+		case 2:
+			IterCount /= 4;
+			for (int i = 0; i < IterCount; i++)
+			{
+				*dwordMem = 0;
+				dwordMem++;
+			}
+			break;
+		default:
+			break;
+		}
 	}
 	
 	const char* GetErrorString(cudaError_t errcode)
@@ -82,12 +117,10 @@ extern "C"
 	{
 		status = CENGINE_STATUS_INIT;
 		DebugMessage = L" ";
-		ResourceCounter = 0;
-		argsMem = nullptr;
+		argsMemTest = nullptr;
 		//Determine if we have CUDA device?
-		int Count;
 		cudaDeviceProp deviceProp;
-		errcode = cudaGetDeviceCount(&Count);
+		errcode = cudaGetDeviceCount(&DataDesc.DeviceCount);
 		if (errcode == cudaErrorInsufficientDriver || errcode == cudaErrorNoDevice)
 		{
 			if (errcode == cudaErrorInsufficientDriver)
@@ -102,34 +135,42 @@ extern "C"
 			status = CENGINE_STATUS_NOCUDA;
 			return false;
 		}
-		int DeviceID = 0;
+		//set compute model to max. Later we update that when looking devices
+		DataDesc.ComputeMajor = 0x0000FFFF;
+		DataDesc.ComputeMinor = 0x000000FF;
 
-		//Several devices?
-		if (Count > 1)
+		//errcode = cudaMallocHost(&DataDesc.Devices, sizeof(DeviceToken)*DataDesc.DeviceCount);
+		DataDesc.Devices = (DeviceToken*)&tempDevices[0];
+		for (int DeviceID = 0; DeviceID < DataDesc.DeviceCount; DeviceID++)
 		{
-			DebugMessage = L"Several devices detected! At this point there is no sync code to provide multidevice rendering, sorry.\nHowewer we choose the most powerfull device in the system...";
-			//Use a best device. Also check compute_mode prohibiten
-			BestDeviceID = GetBestDeviceID(Count);
-			errcode = cudaSetDevice(BestDeviceID);
-			if (BestDeviceID == -1) return false;
-		}
-		else
-		{
-			//if only one device, we at least must check is compute mode is prohibiten?
 			errcode = cudaGetDeviceProperties(&deviceProp, DeviceID);
+			if (deviceProp.computeMode != cudaComputeMode::cudaComputeModeProhibited)
+			{
+				DataDesc.ComputeDeviceCount++;
+			}
+			else continue;
+
+			int ComputeVer = (deviceProp.major * 10) + deviceProp.minor;
+			int KnownComputeVer = (DataDesc.ComputeMajor * 10) + DataDesc.ComputeMinor;
+			if (ComputeVer < KnownComputeVer)
+			{
+				DataDesc.ComputeMajor = deviceProp.major;
+				DataDesc.ComputeMinor = deviceProp.minor;
+			}
+
+			DataDesc.Devices[DataDesc.ComputeDeviceCount - 1] = DeviceID;
+		}
+		if (DataDesc.ComputeDeviceCount == 0)
+		{
 			if (deviceProp.computeMode == cudaComputeMode::cudaComputeModeProhibited)
 			{
 				status = CENGINE_STATUS_FATALERROR;
 				DebugMessage = L"Device computeMode set to prohibiten! Can't compute!";
 				return false;
 			}
-			BestDeviceID = DeviceID;
-			errcode = cudaSetDevice(BestDeviceID);
 		}
-
+		errcode = cudaSetDevice(DataDesc.Devices[0]);
 		//Get device stuff
-		
-
 		status = CENGINE_STATUS_IDLE;
 		return true;
 	}
@@ -143,33 +184,16 @@ extern "C"
 		result.height = height;
 		result.bytes = (width * height) * 3;
 		
-		ResourceCounter++;
-		if (ResourceCounter == CENGINE_MAX_CUDA_RESOURCES)
-		{
-			status = CENGINE_STATUS_FATALERROR;
-			return result;
-		}
-		
 		status = CENGINE_STATUS_IDLE;
 		return result;
 	}
 
-	void cuda_FreeTexture(cudaImage image)
-	{
-
-		ResourceCounter--;
-		return;
-	}
 
 	void cuda_deinit()
 	{
 		if (status != CENGINE_STATUS_IDLE)
 		{
 			//TODO Sync code
-		}
-		if (ResourceCounter != 0)
-		{
-			status = CENGINE_STATUS_FATALERROR;
 		}
 	}
 
@@ -184,27 +208,31 @@ extern "C"
 
 	cudaError_t temp_callKernels(int width, int height, pFrame frame, void* args, int argsSize)
 	{
-		dim3 grid (256, 256, 1);
+		///#TODO: Different devices can have different recommeded grid
+		//dim3 blocks(4, 4, 1);
+		//dim3 grid(BlockWidth / blocks.x, BlockHeight / blocks.y, 1);
+
+		dim3 grid(256, 256, 1);
 		dim3 blocks(width / grid.x, height / grid.y, 1);
-		if (argsMem != nullptr) cudaFree(argsMem);
-		
+
 		errcode = cudaConfigureCall(grid, blocks);
 
 		errcode = cudaSetupArgument(&width, sizeof(int), 0);
-		errcode = cudaSetupArgument(&height,sizeof(int), sizeof (int));
-		errcode = cudaSetupArgument(&frame,sizeof(pFrame), sizeof (int)* 2);
+		errcode = cudaSetupArgument(&height, sizeof(int), sizeof(int));
+		errcode = cudaSetupArgument(&frame, sizeof(pFrame), sizeof(int) * 2);
 		if (args != nullptr)
 		{
-			errcode = cudaMalloc(&argsMem, argsSize);
-			errcode = cudaMemcpy(argsMem, args, argsSize, cudaMemcpyKind::cudaMemcpyHostToDevice);
-			errcode = cudaSetupArgument(&argsMem, sizeof(void*), sizeof(int) * 2 + sizeof(pFrame));
+			if (argsMemTest == nullptr)
+			{
+				errcode = cudaMalloc(&argsMemTest, argsSize);
+			}
+			errcode = cudaMemcpy(argsMemTest, args, argsSize, cudaMemcpyKind::cudaMemcpyHostToDevice);
+			errcode = cudaSetupArgument(&argsMemTest, sizeof(void*), (sizeof(int) * 2) + sizeof(pFrame));
 		}
 
 
 		errcode = cudaLaunch(testKernelFunc);
-
 		return errcode;
-		//testKernelFunc <<<grid, blocks >>> (width, height, frame);
 	}
 
 	__device__ inline int Lerp(int start, int end, double value)
@@ -221,6 +249,7 @@ extern "C"
 		//compute target pixel index for thread and block
 		int posX = threadIdx.x + (blockIdx.x * blockDim.x);
 		int posY = threadIdx.y + (blockIdx.y * blockDim.y);
+		//posY += StartY;
 
 		Color* mainFrame = (Color*)frame;
 		MandelbrotView* mView = (MandelbrotView*)args;

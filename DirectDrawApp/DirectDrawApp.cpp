@@ -36,7 +36,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	Window* wConsole = new Window(consoleParam, nullptr, 0);
 	Log* log = Log::GetInstance();
-	log->PrintMsg(UnicodeString(L"Veliya Engine initialize routine start...\n"));
+	log->PrintMsg(UnicodeString(L"Veliya Engine initialize routine start..."));
 	log->PrintMsg(UnicodeString(L"Привет мир!"));
 
 	DWORD returnResult = window->Go(WndProc);

@@ -67,6 +67,14 @@ void Log::PrintMsg(UnicodeString& format, ...)
 	//calc length
 	int newLen = (1024 - unusedBytes) / 2;
 
+	//write end line
+	if (newLen < 510)
+	{
+		MsgBuffer[newLen] = '\r';
+		MsgBuffer[newLen+1] = '\n';
+		newLen += 2;
+	}
+
 	BOOL result = WriteConsoleW(stdOut, MsgBuffer, newLen, &writtenChar, NULL);
 	LeaveCriticalSection(&log_locker);
 	if (!result)

@@ -31,7 +31,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -64,19 +64,20 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ddraw.lib;cudart.lib;glew32.lib;opengl32.lib;icudt.lib;icuin.lib;icuuc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ddraw.lib;cudart.lib;glew32.lib;opengl32.lib;icudt.lib;icuin.lib;icuuc.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>E:\Programs\DirectX\Lib\x64;E:\Programs\CUDA\Toolkit\lib\x64;C:\Projects\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_35,sm_35;%(CodeGeneration)</CodeGeneration>
+      <CodeGeneration>compute_20,sm_20;%(CodeGeneration)</CodeGeneration>
       <Optimization>Od</Optimization>
       <Runtime>MDd</Runtime>
       <RuntimeChecks>Default</RuntimeChecks>
       <TypeInfo>true</TypeInfo>
       <Warning>W3</Warning>
       <NvccCompilation>compile</NvccCompilation>
+      <CudaRuntime>Shared</CudaRuntime>
     </CudaCompile>
     <CudaLink>
       <AdditionalDependencies>cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -105,10 +106,10 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>E:\Programs\DirectX\Lib\x64;E:\Programs\CUDA\Toolkit\lib\x64;C:\Projects\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ddraw.lib;cudart.lib;glew32.lib;opengl32.lib;icudt.lib;icuin.lib;icuuc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ddraw.lib;cudart.lib;glew32.lib;opengl32.lib;icudt.lib;icuin.lib;icuuc.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
-      <CodeGeneration>compute_20,sm_20</CodeGeneration>
+      <CodeGeneration>compute_30,sm_30</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
@@ -116,6 +117,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CLEngineRenderer.h" />
     <ClInclude Include="CUDAEngineRenderer.h" />
     <ClInclude Include="DirectDrawApp.h" />
     <ClInclude Include="DrawEngine.h" />
@@ -123,6 +125,7 @@
     <ClInclude Include="GLEngineRenderer.h" />
     <ClInclude Include="GPUImage.h" />
     <ClInclude Include="IEngineRenderer.h" />
+    <ClInclude Include="IRenderProgram.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="OpenGL.h" />
     <ClInclude Include="PCEngineRenderer.h" />
@@ -133,12 +136,14 @@
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CLEngineRenderer.cpp" />
     <ClCompile Include="CUDAEngineRenderer.cpp" />
     <ClCompile Include="DirectDrawApp.cpp" />
     <ClCompile Include="DrawEngine.cpp" />
     <ClCompile Include="GLEngineRenderer.cpp" />
     <ClCompile Include="GPUImage.cpp" />
     <ClCompile Include="IEngineRenderer.cpp" />
+    <ClCompile Include="IRenderProgram.cpp" />
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="OpenGL.cpp" />
     <ClCompile Include="PCEngineRenderer.cpp" />
@@ -177,6 +182,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />
   </ImportGroup>
 </Project>

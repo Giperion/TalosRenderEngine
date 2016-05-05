@@ -30,13 +30,7 @@ struct cudaImage
 	void* cudaData;
 };
 
-struct MandelbrotView
-{
-	double x;
-	double y;
-	double scale;
-	int iteration;
-};
+
 
 extern "C"
 {

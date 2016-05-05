@@ -26,17 +26,13 @@ GPUImage::GPUImage(int width, int height, GPUImgType type)
 	
 	glGenBuffers(1, &hPBO);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, hPBO);
-	GLenum lasterror = glGetError();
 	const char* hPBOName = "GLTexturePixelBuffer";
 	glObjectLabel(GL_BUFFER, hPBO, 16, hPBOName);
-	lasterror = glGetError();
 	glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, (width * height) * 4, imgPtr, GL_STREAM_COPY);
-	lasterror = glGetError();
 	
 
 	glGenTextures(1, &hTex);
 	glBindTexture(GL_TEXTURE_2D, hTex);
-	lasterror = glGetError();
 	const char* hTexName = "GLTexture";
 	glObjectLabel(GL_TEXTURE, hTex, 12, hTexName);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
@@ -45,7 +41,6 @@ GPUImage::GPUImage(int width, int height, GPUImgType type)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgPtr);
-	lasterror = glGetError();
 
 	switch (type)
 	{
@@ -68,15 +63,18 @@ GLuint GPUImage::GetGLHandle() const
 
 void* GPUImage::Bind()
 {
-
+	cudaError_t errcode = cudaError_t::cudaSuccess;
 	switch (type)
 	{
 	case IT_OpenCL:
 		break;
 	case IT_OpenGL:
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, hPBO);
+		isBinded = true;
+		return glMapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, GL_READ_WRITE);
 		break;
 	case IT_CUDA:
-		cudaError_t errcode;
+
 		if (isBinded)
 		{
 			void* result;
@@ -92,21 +90,38 @@ void* GPUImage::Bind()
 		isBinded = true;
 		return result;
 	default:
-		Log::GetInstance()->PrintMsg(UnicodeString(L"Unsuppoted bind type"));
+		Log::GetInstance()->PrintMsg(UnicodeString(L"GPUImage::Bind: Unsuppoted bind type"));
 		return 0;
 	}
-
+	Log::GetInstance()->PrintMsg(UnicodeString(L"GPUImage::Bind: Unexpected behaviour"));
+	return 0;
 }
 
 void GPUImage::UnBind()
 {
+	GLboolean UnmapStatus;
 	if (isBinded)
 	{
-		cudaGraphicsUnmapResources(1, &cudaPBO);
-
-
 		glBindTexture(GL_TEXTURE_2D, hTex);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, hPBO);
+
+		switch (type)
+		{
+		case IT_OpenCL:
+			break;
+		case IT_OpenGL:
+			UnmapStatus = glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB);
+			if (!UnmapStatus)
+			{
+				LOG(L"GPUImage::UnBind: glUnmapBuffer return false!");
+			}
+			break;
+		case IT_CUDA:
+			cudaGraphicsUnmapResources(1, &cudaPBO);
+			break;
+		default:
+			break;
+		}
 
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 		isBinded = false;
@@ -115,6 +130,7 @@ void GPUImage::UnBind()
 
 GPUImage::~GPUImage()
 {
+	delete[] imgPtr;
 	switch (type)
 	{
 	case IT_OpenCL:
@@ -127,5 +143,9 @@ GPUImage::~GPUImage()
 	default:
 		break;
 	}
+
+	//free OpenGL resources
+	glDeleteTextures(1, &hTex);
+	glDeleteBuffers(1, &hPBO);
 
 }

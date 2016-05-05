@@ -21,10 +21,18 @@ CUDAEngineRenderer::CUDAEngineRenderer()
 
 void CUDAEngineRenderer::Render(RenderArgs* args)
 {
-	//call kernels, and wait for result
+	/*
+	There is a trick with multigpu borders.
+	There is no one way to create cuda program on all gpu at time, so:
+
+	
+	*/
+
+
+
 	if (mainFrame == nullptr) return;
 	void* cudaFrame = mainFrame->Bind();
-	cudaError_t errcode;
+	cudaError_t errcode = cudaError_t::cudaSuccess;
 	if (args != nullptr)
 	{
 		errcode = temp_callKernels(ENGINEWIDTH, ENGINEHEIGHT, (pFrame)cudaFrame, args->args, args->size);

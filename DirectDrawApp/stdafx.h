@@ -20,5 +20,6 @@
 #include <tchar.h>
 #include <strsafe.h>
 #include "DrawEngine.h"
+#include "PrivateMacro.h"
 
 // TODO: reference additional headers your program requires here
