@@ -1,0 +1,15 @@
+#version 300
+#pragma optimize (off)
+#pragma debug (on)
+
+layout(binding = 0) uniform sampler2D imgTex;
+
+in vec2 testpos;
+in vec2 testUV;
+out vec4 out_color;
+void main()
+{
+	vec4 texColor = texture(imgTex, testUV);
+	vec4 DisplayUV = vec4(testUV.r, testUV.g, 0.0, 1.0);
+	out_color = texColor;
+}
