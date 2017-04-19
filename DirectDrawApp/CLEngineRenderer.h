@@ -9,17 +9,20 @@ class CLEngineRenderer : public IEngineRenderer
 {
 public:
 	CLEngineRenderer();
-	~CLEngineRenderer();
+	virtual ~CLEngineRenderer();
 
 	virtual pFrame GetRenderFrame() override;
 
-	virtual void Render(RenderArgs* args) override;
+	virtual bool Render(RenderArgs* args) override;
 
 	virtual RendererStatus RenderInit(PresentMethod method, class DrawEngine* presenter) override;
 
 	virtual void RenderDestroy(PresentMethod method, class DrawEngine* presenter) override;
 
 	static bool CheckClResult(cl_int CL_code, UnicodeString& FunctionName);
+
+	virtual void SettingsChanged(struct GlobalSettings NewSettings) override;
+
 private:
 
 };

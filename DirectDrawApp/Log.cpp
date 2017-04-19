@@ -47,22 +47,35 @@ Log::~Log()
 
 void Log::PrintMsg(UnicodeString& format, ...)
 {
-	va_list args;
+	va_list ArgsList;
+	va_start(ArgsList, format);
+	PrintMsg(format, ArgsList);
+	va_end(ArgsList);
+}
+
+void Log::PrintMsg(LPCWSTR format, ...)
+{
+	UnicodeString UniFormat (format);
+	va_list ArgsList;
+	va_start(ArgsList, format);
+	PrintMsg(UniFormat, ArgsList);
+	va_end(ArgsList);
+}
+
+void Log::PrintMsg(UnicodeString& format, va_list Args)
+{
 	size_t unusedBytes;
-	UnicodeString* testptr = &format;
-	
+
 	DWORD writtenChar;
 	LPCVOID buf = format.getTerminatedBuffer();
 	DWORD len = format.length();
-	va_start(args, format);
 	EnterCriticalSection(&log_locker);
 	if (FAILED(
-		StringCbVPrintfExW(MsgBuffer, 512 * sizeof(wchar_t), NULL, &unusedBytes, 0, (LPWSTR)buf, args)))
+		StringCbVPrintfExW(MsgBuffer, 512 * sizeof(wchar_t), NULL, &unusedBytes, 0, (LPWSTR)buf, Args)))
 	{
 		wsprintf(MsgBuffer, L"Internal API error: PrintMsg\n");
 		unusedBytes = 966;
 	}
-	va_end(args);
 
 	//calc length
 	int newLen = (1024 - unusedBytes) / 2;
@@ -71,7 +84,7 @@ void Log::PrintMsg(UnicodeString& format, ...)
 	if (newLen < 510)
 	{
 		MsgBuffer[newLen] = '\r';
-		MsgBuffer[newLen+1] = '\n';
+		MsgBuffer[newLen + 1] = '\n';
 		newLen += 2;
 	}
 

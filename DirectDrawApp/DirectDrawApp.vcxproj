@@ -60,6 +60,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FloatingPointModel>Precise</FloatingPointModel>
       <ShowIncludes>false</ShowIncludes>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -70,14 +71,16 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_20,sm_20;%(CodeGeneration)</CodeGeneration>
+      <CodeGeneration>compute_20,sm_20</CodeGeneration>
       <Optimization>Od</Optimization>
       <Runtime>MDd</Runtime>
       <RuntimeChecks>Default</RuntimeChecks>
       <TypeInfo>true</TypeInfo>
       <Warning>W3</Warning>
       <NvccCompilation>compile</NvccCompilation>
-      <CudaRuntime>Shared</CudaRuntime>
+      <CudaRuntime>Static</CudaRuntime>
+      <InterleaveSourceInPTX>true</InterleaveSourceInPTX>
+      <GenerateLineInfo>true</GenerateLineInfo>
     </CudaCompile>
     <CudaLink>
       <AdditionalDependencies>cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -99,6 +102,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalIncludeDirectories>C:\Projects\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -109,7 +113,7 @@
       <AdditionalDependencies>ddraw.lib;cudart.lib;glew32.lib;opengl32.lib;icudt.lib;icuin.lib;icuuc.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
-      <CodeGeneration>compute_30,sm_30</CodeGeneration>
+      <CodeGeneration>compute_20,sm_20</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
@@ -121,8 +125,11 @@
     <ClInclude Include="CUDAEngineRenderer.h" />
     <ClInclude Include="DirectDrawApp.h" />
     <ClInclude Include="DrawEngine.h" />
+    <ClInclude Include="DrawEngineDefinitions.h" />
+    <ClInclude Include="DynamicProgram\ProgramManager.h" />
     <ClInclude Include="EngineCuda_C.cuh" />
     <ClInclude Include="GLEngineRenderer.h" />
+    <ClInclude Include="GlobalSettings.h" />
     <ClInclude Include="GPUImage.h" />
     <ClInclude Include="IEngineRenderer.h" />
     <ClInclude Include="IRenderProgram.h" />
@@ -140,10 +147,12 @@
     <ClCompile Include="CUDAEngineRenderer.cpp" />
     <ClCompile Include="DirectDrawApp.cpp" />
     <ClCompile Include="DrawEngine.cpp" />
+    <ClCompile Include="DrawEngine_EngineTypes.cpp" />
+    <ClCompile Include="DynamicProgram\ProgramManager.cpp" />
     <ClCompile Include="GLEngineRenderer.cpp" />
+    <ClCompile Include="GlobalSettings.cpp" />
     <ClCompile Include="GPUImage.cpp" />
     <ClCompile Include="IEngineRenderer.cpp" />
-    <ClCompile Include="IRenderProgram.cpp" />
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="OpenGL.cpp" />
     <ClCompile Include="PCEngineRenderer.cpp" />

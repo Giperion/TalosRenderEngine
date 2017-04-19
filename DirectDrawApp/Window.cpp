@@ -59,11 +59,12 @@ DWORD Window::Go(WNDPROC proc)
 
 	WindowClass = RegisterClassEx(&wcex);
 
-
+	GlobalSettings Settings;
+	Settings.Load();
 	
 
-	hWnd = CreateWindow(ClassName, Title, (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX),
-		CW_USEDEFAULT, 0, ENGINEWIDTH, ENGINEHEIGHT, NULL, NULL, instance, NULL);
+	hWnd = CreateWindow(ClassName, Title, (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME),
+		Description.x, Description.y, Settings.Width, Settings.Height, NULL, NULL, instance, &Settings);
 
 	
 	if (!hWnd)
@@ -98,15 +99,6 @@ Window::~Window()
 LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
-	PAINTSTRUCT ps;
-	HDC hdc;
-
-
-	RECT TextCoord;
-	PCEngineRenderer* pEngine;
-	CUDAEngineRenderer* CER;
-	CLEngineRenderer* CLEngine;
-
 	switch (message)
 	{
 	case WM_COMMAND:
@@ -122,20 +114,21 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 			DestroyWindow(hWnd);
 			break;
 		case ID_ENGINE_CPU:
-			pDrawEngine->PopRenderer();
-			pEngine = new PCEngineRenderer(ENGINEWIDTH, ENGINEHEIGHT);
-			pDrawEngine->PushRenderer(pEngine);
+		{
 
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
+			GlobalSettings globalSettings = pDrawEngine->GetGlobalSettings();
+			globalSettings.eEngineType = EngineType::Native;
+			pDrawEngine->SetGlobalSettings(globalSettings);
+			RenderFrame(hWnd, false);
+		}
 			break;
 		case ID_ENGINE_CUDA:
-			pDrawEngine->PopRenderer();
-			CER = new CUDAEngineRenderer();
-			pDrawEngine->PushRenderer(CER);
-
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
+		{
+			GlobalSettings globalSettings = pDrawEngine->GetGlobalSettings();
+			globalSettings.eEngineType = EngineType::CUDA;
+			pDrawEngine->SetGlobalSettings(globalSettings);
+			RenderFrame(hWnd, false);
+		}
 			break;
 		default:
 			return DefWindowProc(hWnd, message, wParam, lParam);
@@ -143,6 +136,8 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 		break;
 	case WM_CREATE:
 		//Теперь мне кажется это плохой идеей. Надо создавать его в другом потоке. И вызывать не вызовом pDrawEngine -> Render() а переключением переменной
+		//#UPDATE: БЛДАЖ. Когда я изначально писал этот код, никто не сказал мне, что статические переменные типа таких, лучше создавать как статические переменные
+	{
 		StatusText = new WCHAR[256];
 		pRenderParam = new RenderArgs();
 		mView = new MandelbrotView();
@@ -153,9 +148,12 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 		pRenderParam->size = sizeof(MandelbrotView);
 
 		mView->scale = 1.0;
-		mView->iteration = 80;
+		mView->iteration = 20;
 
-		pDrawEngine = new DrawEngine(hWnd, PresentMethod::PM_OpenGL);
+		LPCREATESTRUCT pCreate = (LPCREATESTRUCT)lParam;
+		GlobalSettings* Settings = (GlobalSettings*)pCreate->lpCreateParams;
+
+		pDrawEngine = new DrawEngine(hWnd, *Settings, PresentMethod::PM_OpenGL);
 		if (pDrawEngine->CurrentState != DrawEngineState::DES_IDLE)
 		{
 			LPWSTR ErrorMessage = new WCHAR[100];
@@ -163,16 +161,13 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 			MessageBox(hWnd, ErrorMessage, L"Critical Error", MB_OK | MB_ICONERROR);
 			ExitProcess(1);
 		}
-
-		//CLEngine = new CLEngineRenderer();
-		//pDrawEngine->PushRenderer(CLEngine);
-		//CER = new CUDAEngineRenderer();
-		//pDrawEngine->PushRenderer(CER);
-
-		pEngine = new PCEngineRenderer(ENGINEWIDTH, ENGINEHEIGHT);
-		pDrawEngine->PushRenderer(pEngine);
+	}
 		break;
 	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		HDC hdc;
+		RECT TextCoord;
 		hdc = BeginPaint(hWnd, &ps);
 		TextCoord.bottom = 5;
 		TextCoord.top = 5;
@@ -182,6 +177,7 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 		StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms\r\n", pDrawEngine->GetLastRenderTime());
 		DrawTextW(hdc, StatusText, -1, &TextCoord, DT_SINGLELINE | DT_NOCLIP);
 		EndPaint(hWnd, &ps);
+	}
 		
 		break;
 	case WM_DESTROY:
@@ -195,101 +191,90 @@ LRESULT CALLBACK Window::MessageHandler(HWND hWnd, UINT message, WPARAM wParam, 
 		if (wParam == VK_ESCAPE) DestroyWindow(hWnd);
 		if (wParam == VK_F2)
 		{
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+			RenderFrame(hWnd, false);
 		}
 		if (wParam == VK_NUMPAD1)
 		{
 			mView->scale *= 1.1;
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+			RenderFrame(hWnd, false);
 		}
 		if (wParam == VK_NUMPAD3)
 		{
 			mView->scale *= 0.9;
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+			RenderFrame(hWnd, false);
 		}
 
 		if (wParam == VK_NUMPAD2)
 		{
 			mView->y -= 0.05 * mView->scale;
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+			RenderFrame(hWnd, false);
 		}
 		if (wParam == VK_NUMPAD8)
 		{
 			mView->y += 0.05 * mView->scale;
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+			RenderFrame(hWnd, false);
 		}
 		if (wParam == VK_NUMPAD4)
 		{
 			mView->x -= 0.05 * mView->scale;
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+			RenderFrame(hWnd, false);
 		}
 		if (wParam == VK_NUMPAD6)
 		{
 			mView->x += 0.05 * mView->scale;
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+			RenderFrame(hWnd, false);
 		}
 
 		if (wParam == VK_NUMPAD7)
 		{
 			mView->iteration += 5;
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"New Iteration: %d ", mView->iteration);
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
-
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
-
+			RenderFrame(hWnd, false);
 		}
 		if (wParam == VK_NUMPAD9)
 		{
 			mView->iteration -= 5;
-			pDrawEngine->Render(pRenderParam);
-			InvalidateRect(hWnd, NULL, false);
-
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"New Iteration: %d ", mView->iteration);
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
-
-			StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
-			Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+			RenderFrame(hWnd, true);
 		}
 
 		break;
 	case WM_SIZE:
-		pDrawEngine->Render(pRenderParam);
+	{
+		WORD NewWidth = LOWORD(lParam);
+		WORD NewHeight = HIWORD(lParam);
+		GlobalSettings Settings = pDrawEngine->GetGlobalSettings();
+		Settings.Width = NewWidth;
+		Settings.Height = NewHeight;
+		pDrawEngine->SetGlobalSettings(Settings);
+		RenderFrame(hWnd, false);
+	}
 		break;
 	case WM_TIMER:
 		if (wParam == TIMER_RENDER)
 		{
-			pDrawEngine->Render(pRenderParam);
+			RenderFrame(hWnd, false);
 		}
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
+}
+
+void Window::RenderFrame(HWND hWnd, bool ShowNewIterationCount)
+{
+    if (pDrawEngine->Render(pRenderParam))
+    {
+        InvalidateRect(hWnd, NULL, false);
+
+        if (ShowNewIterationCount)
+        {
+            StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"New Iteration: %d ", mView->iteration);
+            Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+        }
+
+        StringCbPrintf(StatusText, 256 * sizeof(WCHAR), L"RenderTime: %f ms", pDrawEngine->GetLastRenderTime());
+        Log::GetInstance()->PrintMsg(UnicodeString(StatusText));
+    }
 }
 
 bool Window::MessageLoop()

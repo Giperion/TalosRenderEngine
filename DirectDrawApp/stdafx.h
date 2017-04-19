@@ -22,4 +22,4 @@
 #include "DrawEngine.h"
 #include "PrivateMacro.h"
 
-// TODO: reference additional headers your program requires here
+typedef icu::UnicodeString UniString;

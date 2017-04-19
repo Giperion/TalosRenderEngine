@@ -209,11 +209,11 @@ extern "C"
 	cudaError_t temp_callKernels(int width, int height, pFrame frame, void* args, int argsSize)
 	{
 		///#TODO: Different devices can have different recommeded grid
-		//dim3 blocks(4, 4, 1);
-		//dim3 grid(BlockWidth / blocks.x, BlockHeight / blocks.y, 1);
+		dim3 blocks(4, 4, 1);
+		dim3 grid(width / blocks.x, height / blocks.y, 1);
 
-		dim3 grid(256, 256, 1);
-		dim3 blocks(width / grid.x, height / grid.y, 1);
+		//dim3 grid(256, 256, 1);
+		//dim3 blocks(width / grid.x, height / grid.y, 1);
 
 		errcode = cudaConfigureCall(grid, blocks);
 
@@ -242,6 +242,77 @@ extern "C"
 
 	//dim3 blockIdx <- gridDim
 	//dim3 threadIdx <- blocks
+
+	__device__ FColor HSV2RGB(double Hue, double Saturation, double Value)
+	{
+		double      hh, p, q, t, ff;
+		long        i;
+		FColor        out;
+		out.A = 1.0;
+
+		if (Saturation <= 0.0) {       // < is bogus, just shuts up warnings
+			out.R = Value;
+			out.G = Value;
+			out.B = Value;
+			return out;
+		}
+		hh = Hue;
+		if (hh >= 360.0) hh = 0.0;
+		hh /= 60.0;
+		i = (long)hh;
+		ff = hh - i;
+		p = Value * (1.0 - Saturation);
+		q = Value * (1.0 - (Saturation * ff));
+		t = Value * (1.0 - (Saturation * (1.0 - ff)));
+
+		switch (i) {
+		case 0:
+			out.R = Value;
+			out.G = t;
+			out.B = p;
+			break;
+		case 1:
+			out.R = q;
+			out.G = Value;
+			out.B = p;
+			break;
+		case 2:
+			out.R = p;
+			out.G = Value;
+			out.B = t;
+			break;
+
+		case 3:
+			out.R = p;
+			out.G = q;
+			out.B = Value;
+			break;
+		case 4:
+			out.R = t;
+			out.G = p;
+			out.B = Value;
+			break;
+		case 5:
+		default:
+			out.R = Value;
+			out.G = p;
+			out.B = q;
+			break;
+		}
+		return out;
+	}
+
+	__device__ Color FColor2Color(FColor inColor)
+	{
+		Color Out;
+
+		Out.R = Lerp(0, 255, inColor.R);
+		Out.G = Lerp(0, 255, inColor.G);
+		Out.B = Lerp(0, 255, inColor.B);
+		Out.A = Lerp(0, 255, inColor.A);
+
+		return Out;
+	}
 
 	__global__ void testKernelFunc(int width, int height, pFrame frame, void* args)
 	{
@@ -295,23 +366,65 @@ extern "C"
 
 		if (fabs(ResultY) < PixelHeight / 2) ResultY = 0.0;
 
-		for (; Iteration < MaxIteration && ((Zx_x2 + Zy_x2) < EscapeRadius_x2); Iteration++)
-		{
-			Zy = 2 * Zx * Zy + ResultY;
-			Zx = Zx_x2 - Zy_x2 + ResultX;
-			Zx_x2 = Zx * Zx;
-			Zy_x2 = Zy * Zy;
-		}
+        for (; Iteration < MaxIteration && ((Zx_x2 + Zy_x2) < EscapeRadius_x2); Iteration++)
+        {
+            Zy = 2 * Zx * Zy + ResultY;
+            Zx = Zx_x2 - Zy_x2 + ResultX;
+            Zx_x2 = Zx * Zx;
+            Zy_x2 = Zy * Zy;
+        }
 
-		double Value = (1.0 / (double)80) *  Iteration;
-		//Ðàíüøå âîçâðàùàëè öâåò ïî òàáëèöå, íî óâû, ýòî íå ýôôåêòèâíûé ñïîñîá
-		//return ResoulveColor(Iteration);
-		int grayscaleComp = Lerp(0, 255, Value);
-
-		target.R = grayscaleComp; target.G = grayscaleComp; target.B = grayscaleComp;
-		target.A = 255;
+		double NewValue = 1.0 * (Iteration % mView->iteration);
+		FColor HDRColor = HSV2RGB(Iteration % 361, 0.01, NewValue);
+		target = FColor2Color(HDRColor);
 	}
 
+	__global__ void JuliaKernelFunc(int width, int height, pFrame frame, void* args)
+	{
+		int posX = threadIdx.x + (blockIdx.x * blockDim.x);
+		int posY = threadIdx.y + (blockIdx.y * blockDim.y);
+		//posY += StartY;
 
+		Color* mainFrame = (Color*)frame;
+		MandelbrotView* mView = (MandelbrotView*)args;
+
+		double cRe, cIm;
+		double newRe, newIm, oldRe, oldIm;
+		int newIndex = (posY * width) + posX;
+
+		Color& target = mainFrame[newIndex];
+
+		//pick some values for the constant c, this determines the shape of the Julia Set
+		cRe = -0.7;
+		cIm = 0.27015;
+
+		double ScaledX = mView->x * 0.03;
+		ScaledX /= mView->scale * 2;
+		double ScaledY = mView->y * 0.03;
+		ScaledY /= mView->scale * 2;
+
+		//calculate the initial real and imaginary part of z, based on the pixel location and zoom and position values
+		newRe = 1.5 * (posX - width / 2) / (0.5 * mView->scale * width) + ScaledX;
+		newIm = (posY - height / 2) / (0.5 * mView->scale * height) + ScaledY;
+
+		//i will represent the number of iterations
+		int i;
+		//start the iteration process
+		for (i = 0; i < mView->iteration; i++)
+		{
+			//remember value of previous iteration
+			oldRe = newRe;
+			oldIm = newIm;
+			//the actual iteration, the real and imaginary part are calculated
+			newRe = oldRe * oldRe - oldIm * oldIm + cRe;
+			newIm = 2 * oldRe * oldIm + cIm;
+			//if the point is outside the circle with radius 2: stop
+			if ((newRe * newRe + newIm * newIm) > 4) break;
+		}
+
+		FColor FResult = HSV2RGB((double)(i % 361), 0.8, 1.0 * (i < mView->iteration));
+
+		target = FColor2Color(FResult);
+	}
 
 }

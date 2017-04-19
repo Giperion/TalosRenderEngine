@@ -1,4 +1,4 @@
-#version 430
+#version 300
 #pragma optimize (off)
 #pragma debug (on)
 layout(location = 0) in vec3 in_Position;

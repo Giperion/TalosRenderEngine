@@ -2,12 +2,11 @@
 class IRenderProgram
 {
 public:
-	UnicodeString Name;
 
-	IRenderProgram();
-	~IRenderProgram();
+	virtual void* GetBinaryCode() = 0;
+	virtual UniString GetAllDrawCoPrograms() = 0;
 
-	void* GetBinaryCode();
+
 	
 };
 

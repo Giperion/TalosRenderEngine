@@ -13,6 +13,8 @@ public:
 
 	LRESULT CALLBACK MessageHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+	void RenderFrame(HWND hWnd, bool ShowNewIterationCount);
+
 	WindowParam GetWindowParam();
 
 	~Window();

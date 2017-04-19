@@ -1,17 +1,16 @@
 ﻿#include "stdafx.h"
 #include <math.h>
 #include "resource.h"
+#include "PCEngineRenderer.h"
 #pragma warning( disable : 4566 )
 
-DrawEngine::DrawEngine(HWND hWnd, PresentMethod PMethod)
+DrawEngine::DrawEngine(HWND hWnd, GlobalSettings InSettings, PresentMethod PMethod /*= PM_DirectDraw*/)
 {
 	AttachedHWND = hWnd;
-
 	presentMethod = PMethod;
-
 	CurrentState = DrawEngineState::DES_INIT;
-
 	LastRenderTime = 0.0;
+	Settings = InSettings;
 
 	QueryPerformanceFrequency(&frequency);
 
@@ -36,12 +35,22 @@ DrawEngine::DrawEngine(HWND hWnd, PresentMethod PMethod)
 		}
 		break;
 	default:
-		MessageBox(AttachedHWND, L"Undefined present method is choosen!", L"Critical Error", MB_OK | MB_ICONERROR);
+		MessageBox(AttachedHWND, L"Undefined present method is chosen!", L"Critical Error", MB_OK | MB_ICONERROR);
 		CurrentState = DrawEngineState::DES_PRESENTERFAILED;
 		break;
 	}
+	//create default render engine
+	IEngineRenderer* renderer = CreateRenderEngine(Settings.eEngineType);
+	if (renderer == nullptr)
+	{
+		Log::GetInstance()->PrintMsg(L"Error, trying create a default render engine type: %s", EngineType::ToString(Settings.eEngineType));
+		renderer = new PCEngineRenderer();
+	}
 	CurrentState = DrawEngineState::DES_IDLE;
+
+	PushRenderer(renderer);
 }
+
 
 bool DrawEngine::InitDirectDraw()
 {
@@ -184,6 +193,8 @@ DrawEngine::~DrawEngine()
 		MessageBox(AttachedHWND, L"Undefined deinit method called!", L"Critical Error", MB_OK | MB_ICONERROR);
 		break;
 	}
+
+	Settings.Save();
 }
 
 void DrawEngine::ShutDownDirectDraw()
@@ -239,24 +250,14 @@ EXPERIMENTAL void DrawEngine::DrawTest()
 	pPrimarySurface->Unlock(DirectSurfaceDesc.lpSurface);
 }
 
-DWORD WINAPI DrawEngine::ThreadEntryPoint(DWORD param)
-{
-	return 3;
-}
-
 RenderMethod DrawEngine::GetCurrentRenderMethod()
 {
 	return renderMethod;
 }
 
-double DrawEngine::GetLastRenderTime()
+double DrawEngine::GetLastRenderTime() const
 {
 	return LastRenderTime;
-}
-
-void NYI DrawEngine::SetRenderMethod(RenderMethod newMethod)
-{
-	
 }
 
 PresentMethod DrawEngine::GetCurrentPresentMethod()
@@ -264,29 +265,30 @@ PresentMethod DrawEngine::GetCurrentPresentMethod()
 	return presentMethod;
 }
 
-void NYI DrawEngine::SetPresentMethod(PresentMethod newPresentMethod)
+const GlobalSettings DrawEngine::GetGlobalSettings() const
 {
-
+	return Settings;
 }
 
 void DrawEngine::PushRenderer(IEngineRenderer* iRenderer)
 {
 	if (CurrentState == DES_IDLE)
 	{
+#ifdef OPENGL_BLT_TEX
 		//if OpenGL we need create a framebufffer
 		if (presentMethod == PresentMethod::PM_OpenGL)
 		{
+
 			GLuint newFrame;
-#ifdef OPENGL_BLT_TEX
+
 			glGenTextures(1, &newFrame);
 			glBindTexture(GL_TEXTURE_2D, newFrame);
 			glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, ENGINEWIDTH, ENGINEHEIGHT);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			FrameBuffers.push_back(newFrame);
-#else
 
-#endif
 		}
+#endif
 		RendererStatus status = iRenderer->RenderInit(presentMethod, this);
 		
 		if (status == RSTATUS_OK)
@@ -304,7 +306,9 @@ void DrawEngine::PopRenderer()
 {
 	if (renderers.size() > 0)
 	{
-		delete renderers[renderers.size() - 1];
+		IEngineRenderer* Renderer = renderers[renderers.size() - 1];
+		Renderer->RenderDestroy(presentMethod, this);
+		delete Renderer;
 		renderers.pop_back();
 	}
 }
@@ -312,19 +316,13 @@ void DrawEngine::PopRenderer()
 //TODO a normal blitter
 bool DrawEngine::Render(RenderArgs* args)
 {
-	RECT rcSource;
-	RECT rcDest;
-	POINT trWindow;
-	unsigned char* VideoMemory = 0;
-	int Allbytes = 0;
 	pFrame newFrame = 0;
-
 	LARGE_INTEGER result;
+    LARGE_INTEGER startTime;
+    LARGE_INTEGER endTime;
 
 	QueryPerformanceCounter(&startTime);
 	
-
-
 	if (!(renderers.size() > 0))
 	{
 		MessageBox(AttachedHWND, L"Render call without renderers", L"Critical Error", MB_OK | MB_ICONERROR);
@@ -333,16 +331,24 @@ bool DrawEngine::Render(RenderArgs* args)
 
 	if (CurrentState == DrawEngineState::DES_IDLE)
 	{
-		CurrentState = DrawEngineState::DES_REQUEST_NEW_FRAME;
 		for (int i = 0; i < renderers.size(); i++)
 		{
-			renderers[i]->Render(args);
+            if (!renderers[i]->Render(args))
+            {
+                return false;
+            }
 		}
 		for (int i = 0; i < renderers.size(); i++)
 		{
 			switch (presentMethod)
 			{
 			case PM_DirectDraw:
+            {
+                int Allbytes = 0;
+                RECT rcSource;
+                RECT rcDest;
+                POINT trWindow;
+                unsigned char* VideoMemory = 0;
 				newFrame = renderers[i]->GetRenderFrame();
 				pBackSurface->Lock(NULL, &DirectSurfaceDesc, DDLOCK_WAIT, NULL);
 				Allbytes = DirectSurfaceDesc.lPitch * DirectSurfaceDesc.dwHeight;
@@ -356,6 +362,7 @@ bool DrawEngine::Render(RenderArgs* args)
 				OffsetRect(&rcDest, trWindow.x, trWindow.y);
 				SetRect(&rcSource, 0, 0, ENGINEWIDTH, ENGINEHEIGHT);
 				pPrimarySurface->Blt(&rcDest, pBackSurface, &rcSource, DDBLT_WAIT, NULL);
+            }
 				break;
 			case PM_GDI:
 
@@ -369,23 +376,25 @@ bool DrawEngine::Render(RenderArgs* args)
 				glBindTexture(GL_TEXTURE_2D, Tex);
 				glTexSubImage2D(GL_TEXTURE_2D, 1, 0, 0, ENGINEWIDTH, ENGINEHEIGHT, GL_RGBA, GL_UNSIGNED_INT, newFrame);
 #endif
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-				glViewport(0, 0, ENGINEWIDTH, ENGINEHEIGHT);
-				glBindVertexArray(DefaultVertexArrayID);
-				glBindBuffer(GL_ARRAY_BUFFER, DefaultVertexBufferID);
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, DefaultVertexIndexID);
-				glUseProgramObjectARB(DefaultShaderObject);
+				{
 
-				//this is texture 2D handle
-				newFrame = renderers[i]->GetRenderFrame();
-				if (newFrame == nullptr) break;
-				glBindTexture(GL_TEXTURE_2D, (GLuint)newFrame);
-				glUniform1i(0, 0);
-				glActiveTexture(GL_TEXTURE0);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+					glViewport(0, 0, Settings.Width, Settings.Height);
+					glBindVertexArray(DefaultVertexArrayID);
+					glBindBuffer(GL_ARRAY_BUFFER, DefaultVertexBufferID);
+					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, DefaultVertexIndexID);
+					glUseProgramObjectARB(DefaultShaderObject);
 
-				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0);
-				gl->OGLSwapBuffers();
-				
+					//this is texture 2D handle
+					newFrame = renderers[i]->GetRenderFrame();
+					if (newFrame == nullptr) break;
+					glBindTexture(GL_TEXTURE_2D, (GLuint)newFrame);
+					glUniform1i(0, 0);
+					glActiveTexture(GL_TEXTURE0);
+
+					glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0);
+					gl->OGLSwapBuffers();
+				}
 				break;
 			default:
 				break;
@@ -409,6 +418,54 @@ void DrawEngine::PostRender(double RenderTime)
 {
 	InvalidateRect(AttachedHWND, NULL, FALSE);
 	LastRenderTime = RenderTime;
+}
+
+void DrawEngine::SetGlobalSettings(GlobalSettings& InSettings)
+{
+	//#HOTFIX: Sometimes we receive 0, 0. Throw that off
+	if (InSettings.Width == 0 || InSettings.Height == 0) return;
+
+	IEngineRenderer* NewEngine = nullptr;
+	if (Settings.IsEngineTypeChanged(InSettings))
+	{
+		//On Engine type changed
+
+		if (renderers.size() > 0)
+		{
+			//#NYI: Check other's engine's, not only first
+			IEngineRenderer* FirstRenderer = renderers[0];
+			EngineType::Value eEngineType = GetEngineType(FirstRenderer);
+
+			if (eEngineType != Settings.eEngineType)
+			{
+				Log::GetInstance()->PrintMsg(L"Error: Current engine type: \"%s\", while settings tells that we have \"%s\"!", EngineType::ToString(eEngineType), EngineType::ToString(Settings.eEngineType));
+			}
+
+			PopRenderer();
+
+			NewEngine = CreateRenderEngine(InSettings.eEngineType);
+		}
+		else
+		{
+			//we have no render engine's yet, create a new one
+			NewEngine = CreateRenderEngine(InSettings.eEngineType);
+		}
+	}
+
+	if (Settings.IsResolutionChanged(InSettings))
+	{
+		for (IEngineRenderer* renderer : renderers)
+		{
+			renderer->SettingsChanged(InSettings);
+		}
+	}
+
+	Settings = InSettings;
+
+	if (NewEngine != nullptr)
+	{
+		PushRenderer(NewEngine);
+	}
 }
 
 GLCALL bool DrawEngine::PreparePlaneScene()

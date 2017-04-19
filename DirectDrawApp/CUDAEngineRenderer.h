@@ -29,16 +29,16 @@ class CUDAEngineRenderer :
 {
 public:
 	CUDAEngineRenderer();
-	~CUDAEngineRenderer();
-
-	//Thread entry point
-	DWORD MainThread(LPVOID param);
+	virtual ~CUDAEngineRenderer();
 
 	virtual pFrame GetRenderFrame();
-	virtual void Render(RenderArgs* args);
+	virtual bool Render(RenderArgs* args);
+
+	virtual void SettingsChanged(struct GlobalSettings NewSettings) override;
+
+	virtual RendererStatus RenderInit(enum PresentMethod method, class DrawEngine* presenter) override;
+
 private:
 	GPUImage* mainFrame;
-
-	void* memAlloc(size_t size);
 };
 

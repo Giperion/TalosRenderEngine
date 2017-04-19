@@ -9,73 +9,28 @@
 #include <deque>
 #include <vector>
 #include "IEngineRenderer.h"
-
-enum RenderMethod : byte
-{
-	MandelBrot,
-	SolidColor,
-	Custom
-};
-
-enum DrawEngineState : int
-{
-	DES_INIT,
-	DES_IDLE,
-	DES_PRESENTERFAILED,
-	DES_RENDER_IN_PROGRESS,
-	DES_RENDER_FINISHED,
-	DES_REQUEST_NEW_FRAME,
-	DES_SHUTINGDOWN
-};
-
-enum PresentMethod : byte
-{
-	PM_DirectDraw,
-	PM_GDI,
-	PM_OpenGL
-};
-
-enum EngineType : byte
-{
-	ET_Unknow,
-	ET_Native,
-	ET_CUDA,
-	ET_OpenCL,
-	ET_OpenGL
-};
-
-enum WindowType
-{
-	WT_Graphic,
-	WT_Console
-};
-
-
-
+#include "GlobalSettings.h"
 
 class DrawEngine
 {
 public:
 	volatile DrawEngineState CurrentState;
-	DrawEngine(HWND hWnd, PresentMethod PMethod = PM_DirectDraw);
+	DrawEngine(HWND hWnd, GlobalSettings InSettings, PresentMethod PMethod = PM_DirectDraw);
 
 	EXPERIMENTAL void DrawTest();
-	EXPERIMENTAL DWORD WINAPI ThreadEntryPoint(DWORD param);
 	
 	//RenderEngine command
 	bool Render(RenderArgs* args);
 	void PostRender(double RenderTime);
 
-	bool NYI SetScreenBufferSize(int width, int height);
+	void SetGlobalSettings(GlobalSettings& InSettings);
 
 	//GetSetMethods
-	double GetLastRenderTime();
+	double GetLastRenderTime() const;
 	RenderMethod GetCurrentRenderMethod();
-	void NYI SetRenderMethod(RenderMethod newMethod);
 	PresentMethod GetCurrentPresentMethod();
-	void NYI SetPresentMethod(PresentMethod newPresentMethod);
-	void SetCurrentMethod(RenderMethod method);
 
+	const GlobalSettings GetGlobalSettings () const;
 
 	void PushRenderer(IEngineRenderer* iRenderer);
 	void PopRenderer();
@@ -107,12 +62,14 @@ private:
 	double LastRenderTime;
 	RenderMethod renderMethod;
 	PresentMethod presentMethod;
+	GlobalSettings Settings;
 
-	LARGE_INTEGER startTime;
-	LARGE_INTEGER endTime;
 	LARGE_INTEGER frequency;
 
 	std::deque <IEngineRenderer*> renderers;
+
+	EngineType::Value GetEngineType(IEngineRenderer* Renderer);
+	IEngineRenderer* CreateRenderEngine(EngineType::Value eEngineType) const;
 
 	//InitPresenters
 	bool InitDirectDraw();

@@ -16,7 +16,7 @@ pFrame IEngineRenderer::GetRenderFrame()
 	return nullptr;
 }
 
-void IEngineRenderer::Render(RenderArgs* args)
+bool IEngineRenderer::Render(RenderArgs* args)
 {
-
+    return false;
 }

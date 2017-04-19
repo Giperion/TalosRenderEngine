@@ -3,6 +3,9 @@ struct RenderArgs
 {
 	void* args;
 	size_t size;
+
+    RenderArgs() 
+    :   args(nullptr), size(0) {}
 };
 
 enum RendererStatus : unsigned char
@@ -20,15 +23,14 @@ public:
 	IEngineRenderer();
 	int width;
 	int height;
-	int x;
-	int y;
 
 	virtual pFrame GetRenderFrame();
-	virtual void Render(RenderArgs* args);
+	virtual bool Render(RenderArgs* args);
 
 	//init, deinit
 	virtual RendererStatus RenderInit(enum PresentMethod method, class DrawEngine* presenter){ return RSTATUS_OK; };
 	virtual void RenderDestroy(PresentMethod method, class DrawEngine* presenter){};
+	virtual void SettingsChanged(struct GlobalSettings NewSettings) = 0;
 
 	virtual ~IEngineRenderer();
 };

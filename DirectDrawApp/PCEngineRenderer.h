@@ -22,38 +22,49 @@ class PCEngineRenderer :
 {
 public:
 	PCEngineRenderer(int width, int height, PCEngineMode mode = PCEngineMode::PC_MODE_STANDART);
-	~PCEngineRenderer();
-	virtual void Render(RenderArgs* args);
+	PCEngineRenderer();
+
+
+	virtual ~PCEngineRenderer();
+	virtual bool Render(RenderArgs* args);
 	virtual pFrame GetRenderFrame();
 
-	int GetUsedCores();
 	bool mutex;
 
 	//Thread Entry Point, DO NOT CALL EXTERNAL! : Не вызывайте эти методы где либо еще!
 	DWORD MainThread(LPVOID param);
 	DWORD SatelliteThread(LPVOID param);
 
+    const RendererState GetRendererState();
+	virtual void SettingsChanged(struct GlobalSettings NewSettings) override;
+
+	virtual RendererStatus RenderInit(enum PresentMethod method, class DrawEngine* presenter) override;
+
 private:
-	//true если вызван Render и мы уже рендерим
-	bool QuequeFrame;
 	//Сколько используются ядер (потоков)
 	int UsedCores;
 	RenderSatelliteInfo* m_RSI;
-	//Текущеё состояние
+	//Текущее состояние
 	RendererState CurrentState;
+    CRITICAL_SECTION CurrentStateGuard;
 	//Режим рендера
 	PCEngineMode mode;
-	void* LastArgs;
+    RenderArgs LastArgs;
 
 	//живых потоков
 	DWORD aliveCores;
 	//Utility
+	void Init(int width, int height, PCEngineMode mode);
+	void DeInit();
 	int GetProcessorCoresCount();
+
+    void SetRenderState (const RendererState NewState);
 
 	void BlitToHardware();
 	//DebugColorMethod
 	Color ClearYellow(const int x, const int y);
 
+    void MoveRenderArgs(RenderArgs* pNewArgs);
 
 	//Sync stuff
 	HANDLE Event_Render;

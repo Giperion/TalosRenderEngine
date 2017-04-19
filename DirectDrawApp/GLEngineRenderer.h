@@ -3,6 +3,9 @@ class GLEngineRenderer : public IEngineRenderer
 {
 public:
 	GLEngineRenderer();
-	~GLEngineRenderer();
+	virtual ~GLEngineRenderer();
+
+	virtual void SettingsChanged(struct GlobalSettings NewSettings) override;
+
 };
 

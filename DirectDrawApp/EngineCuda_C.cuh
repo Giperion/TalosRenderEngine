@@ -36,6 +36,7 @@ extern "C"
 {
 	bool cuda_init();
 	__global__ void testKernelFunc(int width, int height, pFrame frame, void* args);
+	__global__ void JuliaKernelFunc(int width, int height, pFrame frame, void* args);
 	bool cuda_GL_init();
 	cudaImage cuda_AllocTexture(int width, int height);
 	void cuda_FreeTexture(cudaImage image);

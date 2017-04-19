@@ -1,10 +1,5 @@
 #include "stdafx.h"
 #include "CUDAEngineRenderer.h"
-DWORD CUDAThreadStartRoutine(LPVOID param)
-{
-	CUDAEngineRenderer* CER = (CUDAEngineRenderer*)param;
-	return CER->MainThread(NULL);
-}
 
 CUDAEngineRenderer::CUDAEngineRenderer()
 {
@@ -14,58 +9,60 @@ CUDAEngineRenderer::CUDAEngineRenderer()
 	{
 		Log::GetInstance()->PrintMsg(UnicodeString(L"Cuda init failed!"));
 	}
-	mainFrame = new GPUImage(ENGINEWIDTH, ENGINEHEIGHT, GPUImgType::IT_CUDA);
 	//CreateThread 
 	//CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)CUDAThreadStartRoutine, this, NULL, NULL);
 }
 
-void CUDAEngineRenderer::Render(RenderArgs* args)
+bool CUDAEngineRenderer::Render(RenderArgs* args)
 {
-	/*
-	There is a trick with multigpu borders.
-	There is no one way to create cuda program on all gpu at time, so:
-
-	
-	*/
-
-
-
-	if (mainFrame == nullptr) return;
+	if (mainFrame == nullptr) return false;
 	void* cudaFrame = mainFrame->Bind();
 	cudaError_t errcode = cudaError_t::cudaSuccess;
 	if (args != nullptr)
 	{
-		errcode = temp_callKernels(ENGINEWIDTH, ENGINEHEIGHT, (pFrame)cudaFrame, args->args, args->size);
+		errcode = temp_callKernels(width, height, (pFrame)cudaFrame, args->args, args->size);
 	}
 	else
 	{
-		errcode = temp_callKernels(ENGINEWIDTH, ENGINEHEIGHT, (pFrame)cudaFrame);
+		errcode = temp_callKernels(width, height, (pFrame)cudaFrame);
 	}
 	
 	if (errcode != cudaSuccess)
 	{
 		const char* errString = GetErrorString(errcode);
 		Log::GetInstance()->PrintMsg(UnicodeString(errString));
+        return false;
 	}
+    return true;
+}
+
+void CUDAEngineRenderer::SettingsChanged(GlobalSettings NewSettings)
+{
+	//in case for future multithreading
+	GPUImage* TempMainFrame = mainFrame;
+	mainFrame = nullptr;
+	delete TempMainFrame;
+	width = NewSettings.Width;
+	height = NewSettings.Height;
+	mainFrame = new GPUImage(width, height, GPUImgType::IT_CUDA);
+}
+
+RendererStatus CUDAEngineRenderer::RenderInit(enum PresentMethod method, class DrawEngine* presenter)
+{
+	GlobalSettings Settings = presenter->GetGlobalSettings();
+	width = Settings.Width;
+	height = Settings.Height;
+	//#TODO: Render in specific region (support x and y members)
+	mainFrame = new GPUImage(width, height, GPUImgType::IT_CUDA);
+	return RSTATUS_OK;
 }
 
 pFrame CUDAEngineRenderer::GetRenderFrame()
 {
 	//return OGL frameBuffer handle
-	WaitCudaThread();
+	//WaitCudaThread();
 	mainFrame->UnBind();
 	return (pFrame)mainFrame->GetGLHandle();
-}
-
-DWORD CUDAEngineRenderer::MainThread(LPVOID param)
-{
-
-
-	while (true)
-	{
-		Sleep(100);
-	}
-	return 1;
 }
 
 

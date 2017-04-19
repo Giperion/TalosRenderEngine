@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "CLEngineRenderer.h"
 #include "GPUImage.h"
+#include "GlobalSettings.h"
 
 #define CHECKCLRESULT(result, function) if (!CLEngineRenderer::CheckClResult (result, UnicodeString (#function))) \
 	return RSTATUS_INTERNALERROR
@@ -20,9 +21,9 @@ pFrame CLEngineRenderer::GetRenderFrame()
 	return 0;
 }
 
-void CLEngineRenderer::Render(RenderArgs* args)
+bool CLEngineRenderer::Render(RenderArgs* args)
 {
-	
+	return false;
 }
 
 RendererStatus CLEngineRenderer::RenderInit(PresentMethod method, class DrawEngine* presenter)
@@ -240,6 +241,11 @@ bool CLEngineRenderer::CheckClResult(cl_int CL_code, UnicodeString& FunctionName
 		return false;
 	}
 	return true;
+}
+
+void CLEngineRenderer::SettingsChanged(struct GlobalSettings NewSettings)
+{
+
 }
 
 #undef CHECKCLRESULT

@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="DynamicProgram">
+      <UniqueIdentifier>{7ef36cf8-98bb-4e40-975e-a03b020c7ecf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GMPTest">
+      <UniqueIdentifier>{1af6de95-0f88-4cbb-b99e-a17234afd9a9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -75,6 +81,15 @@
     <ClInclude Include="IRenderProgram.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DynamicProgram\ProgramManager.h">
+      <Filter>DynamicProgram</Filter>
+    </ClInclude>
+    <ClInclude Include="DrawEngineDefinitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GlobalSettings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -113,7 +128,13 @@
     <ClCompile Include="CLEngineRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="IRenderProgram.cpp">
+    <ClCompile Include="DynamicProgram\ProgramManager.cpp">
+      <Filter>DynamicProgram</Filter>
+    </ClCompile>
+    <ClCompile Include="GlobalSettings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawEngine_EngineTypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

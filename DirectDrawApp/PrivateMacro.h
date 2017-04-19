@@ -24,8 +24,8 @@
 
 //Параметры. Позволяют менять размер кадра рендера. И хотя окно создается с теми же размерами, изменения размера окна не повлияет на размер кадра, кадр будет программно увеличен до размера окна.
 //Но комментировать их низя ;)
-#define ENGINEWIDTH 1024
-#define ENGINEHEIGHT 768
+#define ENGINEWIDTH 1920
+#define ENGINEHEIGHT 1080
 
 /*
 Метод отображения на экран.
@@ -68,6 +68,14 @@ extern "C"
 		byte G;
 		byte B;
 		byte A;
+	};
+
+	struct FColor
+	{
+		double R;
+		double G;
+		double B;
+		double A;
 	};
 }
 

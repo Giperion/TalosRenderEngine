@@ -4,6 +4,7 @@ class Log
 {
 public:
 	void SetHandleFile();
+	void PrintMsg(LPCWSTR format, ...);
 	void PrintMsg(UnicodeString& format, ...);
 	static Log* GetInstance();
 	~Log();
@@ -14,5 +15,6 @@ private:
 	CRITICAL_SECTION log_locker;
 	Log();
 
+	void PrintMsg(UnicodeString& format, va_list Args);
 };
 

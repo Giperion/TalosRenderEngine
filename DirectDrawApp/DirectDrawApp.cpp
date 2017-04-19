@@ -19,15 +19,19 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_ LPTSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
+	RECT DesktopRect;
+	HWND DesktopHwnd = GetDesktopWindow();
+	GetWindowRect(DesktopHwnd, &DesktopRect);
+	int Width = DesktopRect.right - DesktopRect.left;
+	int Height = DesktopRect.bottom - DesktopRect.top;
+
 
 	WindowParam param;
 	param.width = ENGINEWIDTH;
 	param.height = ENGINEHEIGHT;
-	param.x = 100;
-	param.y = 100;
+	param.x = (Width / 2) - (ENGINEWIDTH / 2);
+	param.y = (Height / 2) - (ENGINEHEIGHT / 2);
 	param.type = WindowType::WT_Graphic;
-
-	//test code
 
 	window = new Window(param, hInstance, nCmdShow);
 
